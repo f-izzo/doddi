@@ -1,57 +1,26 @@
+#define PIN            23   // Pin on the Arduino connected to the NeoPixels
+#define NUMPIXELS      12   //Number of NeoPixels attached to the Arduino
 
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>
-
-//NeoPixels
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
 #include <avr/power.h>
 #endif
-
-// Which pin on the Arduino is connected to the NeoPixels?
-// On a Trinket or Gemma we suggest changing this to 1
-#define PIN            23
-
-// How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS      12
-
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_RGB + NEO_KHZ800);
-
-/* Assign a unique ID to this sensor at the same time */
-Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
-
-//Sound stuff
 #include <Audio.h>
 #include <SPI.h>
 #include <SD.h>
 //#include <SerialFlash.h>
 
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_RGB + NEO_KHZ800);
+
+/* Assign a unique ID to this sensor */
+Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
+
 AudioPlaySdWav           playSdWav1;
 AudioOutputAnalog        dac1;
 AudioConnection          patchCord1(playSdWav1, 0, dac1, 0);
-
-
-
-
-
-int faceChange = 1;
-
-void displaySensorDetails(void)
-{
-  sensor_t sensor;
-  accel.getSensor(&sensor);
-  Serial.println("------------------------------------");
-  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-  Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-  Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-  Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" m/s^2");
-  Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" m/s^2");
-  Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" m/s^2");
-  Serial.println("------------------------------------");
-  Serial.println("");
-  //  delay(500);
-}
 
 //faces coordinates
 static const int16_t PROGMEM gtable[12][3] = {
@@ -69,64 +38,68 @@ static const int16_t PROGMEM gtable[12][3] = {
   {  -8.8, -0.2 , -5.7}, // 12
 };
 
+int faceChange = 1;
 boolean endgame = false;
-
 int vib1 = 16;
 int vib2 = 17;
 int8_t activeF = 1;
 
 //Faces states
+//TODO: turn this vector into a structure
 int F [12] [6];
-//F[][0] -->  is there resource on it? 0 – no, 1 - yes
-//F[][1] --> resource ID
-//F[][2] --> R color value
-//F[][3] --> B color value
-//F[][4] --> G color value
-//F[][5] --> is active?
+/* F[][0] -->  is there resource on it? 0 – no, 1 - yes
+   F[][1] --> resource ID
+   F[][2] --> R color value
+   F[][3] --> B color value
+   F[][4] --> G color value
+   F[][5] --> is active? */
 
 //Resources only described by color. For now only 4 resources
+//TODO: turn this vector into a structure
 int Res [4] [3];
 //Res[][0] - R
 //Res[][1] - G
 //Res[][2] - B
 
+void displaySensorDetails(void)
+{
+  sensor_t sensor;
+  accel.getSensor(&sensor);
+  Serial.println("------------------------------------");
+  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
+  Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
+  Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
+  Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" m/s^2");
+  Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" m/s^2");
+  Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" m/s^2");
+  Serial.println("------------------------------------");
+  Serial.println("");
+  //  delay(500);
+}
+
 void setup(void) {
-
-
   //setting pins for vibraiton
   pinMode (vib1, OUTPUT);
   pinMode (vib2, OUTPUT);
-
-
   AudioMemory(100);
-
   // initialize SPI:
   SPI.begin();
   // initializa serial
   Serial.begin(9600);
-
-  if (!(SD.begin(10))) {
-    while (1) {
-      Serial.println("Unable to access the SD card");
-      delay(500);
-    }
+  while(!(SD.begin(10))) {
+    Serial.println("Unable to access the SD card");
+    delay(500);
   }
-  delay(1000);
-
-
-
   //zeroing faces array
-  for (int i = 0; i < 12; i++) {
+  for(int i = 0; i < 12; i++) {
     for (int j = 0; j < 6; j++) {
       F[i][j] = 0;
     }
   }
-
   //random assignment of resources to faces. in the end it reads amount from the json
-  for (int i = 0; i < 12; i++) {
+  for(int i = 0; i < 12; i++) {
     F[i][1] = random(0, 3);
   }
-
   //hard set up of resource's color --> in the end this would be loaded from json file
   //resource 1 rgb(255,255,0)
   Res [0][0] = 255; //R
@@ -151,40 +124,32 @@ void setup(void) {
     F[i][3] = Res[F[i][1]][1];
     F[i][4] = Res[F[i][1]][2];
   }
-
   pixels.begin();
-#ifndef ESP8266
-  //while (!Serial);
-#endif
-
   Serial.println("Accelerometer Test"); Serial.println("");
-
   /* Initialise the sensor */
   if (!accel.begin())
   {
-    /* There was a problem detecting the ADXL345 ... check your connections */
     Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
     while (1);
   }
-
   /* Display some basic information on this sensor */
   //displaySensorDetails();
 
   //wipe the pixels
   for (int i = 0; i < NUMPIXELS; i++) {
-
     pixels.setPixelColor(i, pixels.Color(0, 0, 0));
     pixels.show();
   }
 
-
-  endgame = End(50, 150);
-  while (!endgame) {
+  endgame = readRoll(50, 150);
+  /*while (!endgame) {
     Serial.println("Waiting for start... ");
     Serial.println(endgame);
     //delay(1000);
-    endgame = End(50, 150);
-  }
+    endgame = readRoll(50, 150);
+  }*/
+  //Delay to skip start game condition
+  delay(10000);
   Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
   // sound.play("1.wav");
   Serial.println("Start playing");
@@ -214,11 +179,10 @@ void loop(void)
     if (F[i][5] == 0) {
       pixels.setPixelColor(i, pixels.Color(F[i][2], F[i][3], F[i][4]));
     }
-
   }
 
   //long shake
-  boolean endgame = End(50, 120);
+  boolean endgame = readRoll(50, 120);
 
   while (endgame) {
     Serial.print("End Game:           enter animation");
@@ -243,20 +207,13 @@ void loop(void)
       }
     }
     game();
-
-    endgame = End(50, 170);   //coment this out to stay inside the loop
-
+    endgame = readRoll(50, 170);   //coment this out to stay inside the loop
     //minigame sound play
     Serial.println("End playing");
     //playSdWav1.play("win.wav");
     //delay(50); // wait for library to parse WAV info
   }
-
-
-
-
   activeF = getFace();
-
   Serial.print("Face: ");
   Serial.print(activeF + 1);
   Serial.print("    ");
@@ -272,15 +229,10 @@ void loop(void)
 //  Serial.print("    ");
 //  Serial.print("Face3: ");
 //  Serial.println(F[2][5]);
-
-
   //Highlight
   if (F[activeF][5] == 0) {
-
   //  Serial.print("We're here      Face resource is:");
   //  Serial.println(F[activeF][1]);
-
- 
     // simple blink
        // if (F[activeF][1] == 0) {
           pixels.setPixelColor(activeF, pixels.Color(F[activeF][2], F[activeF][3], F[activeF][4]));
@@ -299,10 +251,6 @@ void loop(void)
           //Serial.println(activeF);
   }
   pixels.show();
-
-
-
-
   //vibration for choosing
   if (faceChange != activeF)
   {
@@ -313,10 +261,7 @@ void loop(void)
     delay(150);
     digitalWrite(vib1, LOW);
     digitalWrite(vib2, LOW);
-
   }
-
-
   //activating the face sequance
   while (activ) {
     //tell me what was activated
@@ -419,7 +364,7 @@ boolean shake(uint32_t ms, uint32_t timeout) {
   return true;
 }
 
-boolean End(uint32_t ms, uint32_t timeout) {
+boolean readRoll(uint32_t ms, uint32_t timeout) {
   uint32_t startTime, prevTime, currentTime;
   int32_t  prevX, prevY, prevZ;
   int32_t  dX, dY, dZ;
@@ -451,28 +396,21 @@ boolean End(uint32_t ms, uint32_t timeout) {
       prevTime = millis(); // Reset timer
     }
   }
-
   return true;
 }
 
-
 void game() {
-
   //wipe the pixels
   for (int i = 0; i < NUMPIXELS; i++) {
 
     pixels.setPixelColor(i, pixels.Color(0, 0, 0));
     pixels.show();
   }
-
   boolean facesLeft = true;
   int x = 0;
-
   while (facesLeft) {
-
     //get the upwards face
     activeF = getFace();
-
     //check if there are still not activeated faces
     for (int i = 0; i < 12; i++) {
       x = x + F[i][0];
@@ -484,7 +422,6 @@ void game() {
       facesLeft = true;
       x = 0;
     }
-
     //Highlight
     if (F[activeF][0] == 0) {
       pixels.setPixelColor(activeF, pixels.Color((F[activeF][2] + 50), (F[activeF][3] + 50), (F[activeF][4] + 50)));
@@ -506,25 +443,13 @@ void game() {
     ////
     //    }
   }
-
   //zeroing faces
   for (int i = 0; i < 12; i++) {
     F[i][0] = 0;
   }
   facesLeft = true;
-
   //minigame sound play
   Serial.println("End playing");
   playSdWav1.play("win.wav");
   delay(50); // wait for library to parse WAV info
-
-
 }
-
-
-
-
-
-
-
-
