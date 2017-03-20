@@ -47,31 +47,24 @@ typedef struct color{
 typedef struct face{
   boolean resPresent;
   int resID;
-  color resColor;
+  uint32_t color;
   boolean isActive;
 } face;
 
+const uint32_t yellow = pixels.Color(255, 255, 0);
+const uint32_t green = pixels.Color(0, 200, 0);
+const uint32_t blue = pixels.Color(0, 0, 200);
+const uint32_t purple = pixels.Color(150, 0, 150);
+const uint32_t off = pixels.Color(0, 0, 0);
+
+const int vib1 = 16;
+const int vib2 = 17;
 int faceChange = 1;
 boolean endgame = false;
-int vib1 = 16;
-int vib2 = 17;
 int8_t activeF = 1;
 
-//Faces states
-//TODO: turn this vector into a structure
+//Faces' states structure array
 face F[12] = {0};
-/* F[][0] -->  is there resource on it? 0 – no, 1 - yes
-   F[][1] --> resource ID
-   F[][2] --> R color value
-   F[][3] --> B color value
-   F[][4] --> G color value
-   F[][5] --> is active? */
-
-//Resources only described by color. For now only 4 resources
-color resType[4] = {{255,255,0}, //type1: yellow
-                    {0,200,0},   //type2: green
-                    {0,0,200},   //type3: blue
-                    {0,200,0}};  //type4: green
 
 void displaySensorDetails(void)
 {
@@ -88,6 +81,22 @@ void displaySensorDetails(void)
   Serial.println("");
   //  delay(500);
 }
+void setAllPixels(uint32_t color) {
+  for (int i = 0; i < NUMPIXELS; i++) {
+    pixels.setPixelColor(i, color);
+    pixels.show();
+    delay(50);
+  }
+}
+uint8_t splitColor ( uint32_t c, char value )
+{
+  switch ( value ) {
+    case 'r': return (uint8_t)(c >> 16);
+    case 'g': return (uint8_t)(c >>  8);
+    case 'b': return (uint8_t)(c >>  0);
+    default:  return 0;
+  }
+}
 
 void setup(void) {
   /* Hardware initialization */
@@ -101,11 +110,8 @@ void setup(void) {
     delay(500);
   }
   pixels.begin();
-  //wipe the pixels
-  for (int i = 0; i < NUMPIXELS; i++) {
-    pixels.setPixelColor(i, pixels.Color(0, 0, 0));
-    pixels.show();
-  }
+  // turn off all the pixels
+  pixels.show();
   if (!accel.begin())
   {
     Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
@@ -117,39 +123,49 @@ void setup(void) {
   // Initialize faces array
   memset(&F, 0, 12 * sizeof(face));
   // Random assignment of resources to faces.
-  // in the future it will read the amount from the json
   for(int i = 0; i < 12; i++) {
     F[i].resID = random(0, 3);
   }
-  // Copy resource color to faces based on resID
+  // Set resource color to faces based on resID
   for (int i = 0; i < 12; i++) {
-    F[i].resColor = resType[F[i].resID];
+    switch(F[i].resID)
+    {
+      case 0:
+        F[i].color = yellow;
+        break;
+      case 1:
+        F[i].color = green;
+        break;
+      case 2:
+        F[i].color = blue;
+        break;
+      case 3:
+        F[i].color = green;
+        break;
+    }
   }
 }
 
 void loop(void)
 {
   /* Game start */
-  boolean start = readRoll(50, 150);
+  boolean start = shake(50, 150, 1);
   // Old game start condition temporarily replaced with delay
   /*while (!start) {
     Serial.println("Waiting for start... ");
     Serial.println(start);
     //delay(1000);
-    start = readRoll(50, 150);
+    start = shake(50, 150, 1);
   }*/
+  //TODO: remove this delay once start condition is ready
   delay(10000);
   Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
   // sound.play("1.wav");
   Serial.println("Start playing");
   playSdWav1.play("start1.wav");
   delay(50); // wait for library to parse WAV info
-  // Set all pixels to purple
-  for (int i = 0; i < 12; i++) {
-    pixels.setPixelColor(i, pixels.Color(150, 0, 150));
-    pixels.show();
-    delay(50);
-  }
+  setAllPixels(purple);
+
   //TODO: Add main game loop
   /* Get a new sensor event */
   sensors_event_t event;
@@ -163,35 +179,27 @@ void loop(void)
   // Set faces color to corresponding resources
   for (int i = 0; i < 12; i++) {
     if (F[i].isActive == 0) {
-      pixels.setPixelColor(i, pixels.Color(F[i].resColor.r, F[i].resColor.g, F[i].resColor.b));
+      pixels.setPixelColor(i, F[i].color);
     }
   }
+  pixels.show();
 
-  boolean endgame = readRoll(50, 120);
+  boolean endgame = shake(50, 120, 1);
   while (endgame) {
     Serial.print("End Game:           enter animation");
     Serial.println(endgame);
 
     Serial.println("Starting minigames ");
-    playSdWav1.play("start1.wav");                                              //starting minigame sound
+    playSdWav1.play("start1.wav");   //starting minigame sound
     delay(50); // wait for library to parse WAV info
     //delay(1000);
     // animation
     for (int i = 0; i < 3; i++) {
-      // Set all pixels to purple
-      for (int i = 0; i < 12; i++) {
-        pixels.setPixelColor(i, pixels.Color(150, 0, 150));
-        pixels.show();
-        delay(30);
-      } // Turn off all pixels
-      for (int i = 0; i < 12; i++) {
-        pixels.setPixelColor(i, pixels.Color(0, 0, 0));
-        pixels.show();
-        delay(30);
-      }
+      setAllPixels(purple);
+      setAllPixels(off);
     }
     game();
-    endgame = readRoll(50, 170);   //coment this out to stay inside the loop
+    endgame = shake(50, 170, 1);   //coment this out to stay inside the loop
     //minigame sound play
     Serial.println("End playing");
     //playSdWav1.play("win.wav");
@@ -202,43 +210,25 @@ void loop(void)
   Serial.print(activeF + 1);
   Serial.print("    ");
   Serial.print("Shake: ");
-  boolean activ = shake(50, 80);
+  boolean activ = shake(50, 80, 0);
   Serial.print(activ);
   Serial.println("    ");
-//  Serial.print("Face1: ");
-//  Serial.print(F[0].isActive);
-//  Serial.print("    ");
-//  Serial.print("Face2: ");
-//  Serial.print(F[1].isActive);
-//  Serial.print("    ");
-//  Serial.print("Face3: ");
-//  Serial.println(F[2].isActive);
-  //Highlight[2]
+  // Face highlighting
   if (F[activeF].isActive == 0) {
-  //  Serial.print("We're here      Face resource is:");
-  //  Serial.println(F[activeF].resID);
     // simple blink
-       // if (F[activeF].resID == 0) {
-          pixels.setPixelColor(activeF, pixels.Color(F[activeF].resColor.r, F[activeF].resColor.g, F[activeF].resColor.b));
-           pixels.show();
-           delay(100);
-           pixels.setPixelColor(activeF, pixels.Color(0, 0, 0));
-          Serial.print("resource = ");
-          Serial.print(F[activeF].resID);
-          Serial.print("            R= ");
-          Serial.print(F[activeF].resColor.r);
-          Serial.print("            G= ");
-          Serial.print(F[activeF].resColor.g);
-          Serial.print("            B= ");
-          Serial.print(F[activeF].resColor.b);
-         // Serial.print("highlighting face nr   ");
-          //Serial.println(activeF);
+    pixels.setPixelColor(activeF, F[activeF].color);
+    pixels.show();
+    delay(100);
+    pixels.setPixelColor(activeF, off);
+    pixels.show();
+    Serial.print("resource = ");
+    Serial.print(F[activeF].resID);
+    //TODO: print resource status from color intensity
   }
-  pixels.show();
   //vibration for choosing
   if (faceChange != activeF)
   {
-    Serial.println("the face has changed ");
+    Serial.println("the face has changed");
     faceChange = activeF;
     digitalWrite(vib1, HIGH);
     digitalWrite(vib2, HIGH);
@@ -246,51 +236,42 @@ void loop(void)
     digitalWrite(vib1, LOW);
     digitalWrite(vib2, LOW);
   }
-  //activating the face sequence
+  //Face activation sequence
   while (activ) {
-    //tell me what was activated
+    //tell me what face was activated
     Serial.print("Face nr ");
     Serial.print(activeF + 1);
-    Serial.println(" has been activated ");
-
+    Serial.println(" has been activated");
     //change color of the activated face to purple
-    pixels.setPixelColor(activeF, pixels.Color(150, 0, 150));
+    pixels.setPixelColor(activeF, purple);
     pixels.show();
-    //set face as activated
     F[activeF].isActive = 1;
-    //face activation sound here
-
-    // F[].resID --> resource ID
-
-    if (F[activeF].resID == 0) {
-      playSdWav1.play("s1.wav");
-      delay(50); // wait for library to parse WAV info
+    //face activation sound
+    switch(F[activeF].resID)
+    {
+      case 0:
+        playSdWav1.play("s1.wav");
+        break;
+      case 1:
+        playSdWav1.play("s2.wav");
+        break;
+      case 2:
+        playSdWav1.play("s3.wav");
+        break;
+      case 3:
+        playSdWav1.play("s4.wav");
+        break;
     }
-    else if (F[activeF].resID == 1) {
-      playSdWav1.play("s2.wav");
-      delay(50); // wait for library to parse WAV info
-    }
-    else if (F[activeF].resID == 2) {
-      playSdWav1.play("s3.wav");
-      delay(50); // wait for library to parse WAV info
-    }
-    else if (F[activeF].resID == 3) {
-      playSdWav1.play("s4.wav");
-      delay(50); // wait for library to parse WAV info
-    }
-
-    activ = shake(50, 100);
+    delay(50); // wait for library to parse WAV info
+    activ = shake(50, 100, 0);
     //delay(1000);
   }
-  //testing the game
-  //game();
 }
 
 uint32_t getFace(void) {
   int32_t  dX, dY, dZ, d, dMin = 999999;
   int16_t  fX, fY, fZ;
   uint8_t  i, iMin = 0;
-  uint16_t addr = 0;
   sensors_event_t event;
   accel.getEvent(&event);
 
@@ -313,7 +294,8 @@ uint32_t getFace(void) {
 }
 
 //shake detection
-boolean shake(uint32_t ms, uint32_t timeout) {
+boolean shake(uint32_t ms, uint32_t timeout, int small) {
+  int d = (small)? 80 : 210; //small or big shake
   uint32_t startTime, prevTime, currentTime;
   int32_t  prevX, prevY, prevZ;
   int32_t  dX, dY, dZ;
@@ -338,42 +320,7 @@ boolean shake(uint32_t ms, uint32_t timeout) {
     dZ = event.acceleration.z - prevZ;
     // Compare distance.  sqrt() can be avoided by squaring distance
     // to be compared; about 100 units on X+Y+Z axes ((100^2)*3 = 30K)
-    if ((dX * dX + dY * dY + dZ * dZ) >= 80) { // Big change?
-      prevX    = event.acceleration.x;    // Save new position
-      prevY    = event.acceleration.y;
-      prevZ    = event.acceleration.z;
-      prevTime = millis(); // Reset timer
-    }
-  }
-  return true;
-}
-
-boolean readRoll(uint32_t ms, uint32_t timeout) {
-  uint32_t startTime, prevTime, currentTime;
-  int32_t  prevX, prevY, prevZ;
-  int32_t  dX, dY, dZ;
-
-  // Get initial orientation and time
-  sensors_event_t event;
-  accel.getEvent(&event);
-  prevX    = event.acceleration.x;
-  prevY    = event.acceleration.y;
-  prevZ    = event.acceleration.z;
-  prevTime = startTime = millis();
-
-  // Then make repeated readings until orientation settles down.
-  // A normal roll should only take a second or two...if things do not
-  // stabilize before timeout, probably being moved or carried.
-  while (((currentTime = millis()) - startTime) < timeout) {
-    if ((currentTime - prevTime) >= ms) return false; // Stable!
-    sensors_event_t event;
-    accel.getEvent(&event);
-    dX = event.acceleration.x - prevX; // X/Y/Z delta from last stable position
-    dY = event.acceleration.y - prevY;
-    dZ = event.acceleration.z - prevZ;
-    // Compare distance.  sqrt() can be avoided by squaring distance
-    // to be compared; about 100 units on X+Y+Z axes ((100^2)*3 = 30K)
-    if ((dX * dX + dY * dY + dZ * dZ) >= 210) { // Big change?
+    if ((dX * dX + dY * dY + dZ * dZ) >= d) { // Big change?
       prevX    = event.acceleration.x;    // Save new position
       prevY    = event.acceleration.y;
       prevZ    = event.acceleration.z;
@@ -384,17 +331,13 @@ boolean readRoll(uint32_t ms, uint32_t timeout) {
 }
 
 void game() {
-  //turn off the pixels
-  for (int i = 0; i < NUMPIXELS; i++) {
-    pixels.setPixelColor(i, pixels.Color(0, 0, 0));
-    pixels.show();
-  }
+  setAllPixels(off);
   boolean facesLeft = true;
   int x = 0;
   while (facesLeft) {
     //get the upward face
     activeF = getFace();
-    //check if there are still not activeated faces
+    //check if there are not active faces left
     for (int i = 0; i < 12; i++) {
       x = x + F[i].resPresent;
     }
@@ -405,26 +348,16 @@ void game() {
       facesLeft = true;
       x = 0;
     }
-    //Highlight
+    //Highlight face
     if (F[activeF].resPresent == 0) {
-      pixels.setPixelColor(activeF, pixels.Color((F[activeF].resColor.r + 50), (F[activeF].resColor.g + 50), (F[activeF].resColor.b + 50)));
-      F[activeF].resPresent = 1;
+      uint32_t oldcolor = pixels.getPixelColor(activeF);
+      int oldr = splitColor(oldcolor, 'r');
+      int oldg = splitColor(oldcolor, 'g');
+      int oldb = splitColor(oldcolor, 'b');
+      pixels.setPixelColor(activeF, pixels.Color((oldr + 50), (oldg + 50), (oldb + 50)));
       pixels.show();
-
-      Serial.println("We're inside highlighting if");
-      Serial.println( F[activeF].resPresent );
+      F[activeF].resPresent = 1;
     }
-    //    else  if(F[activeF].resPresent == 1){
-    //      playSdWav1.play("loose.wav");
-    //      delay (50);
-
-    //      Serial.println("We're inside else if");
-    //    Serial.println( F[activeF].resPresent );
-    ////      //zeroing faces
-    ////
-    ////       facesLeft = false;
-    ////
-    //    }
   }
   //zeroing faces
   for (int i = 0; i < 12; i++) {
