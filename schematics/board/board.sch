@@ -1,0 +1,544 @@
+EESchema Schematic File Version 2
+LIBS:power
+LIBS:device
+LIBS:transistors
+LIBS:conn
+LIBS:linear
+LIBS:regul
+LIBS:74xx
+LIBS:cmos4000
+LIBS:adc-dac
+LIBS:memory
+LIBS:xilinx
+LIBS:microcontrollers
+LIBS:dsp
+LIBS:microchip
+LIBS:analog_switches
+LIBS:motorola
+LIBS:texas
+LIBS:intel
+LIBS:audio
+LIBS:interface
+LIBS:digital-audio
+LIBS:philips
+LIBS:display
+LIBS:cypress
+LIBS:siliconi
+LIBS:opto
+LIBS:atmel
+LIBS:contrib
+LIBS:valves
+LIBS:teensy
+LIBS:adafruit+pololu
+LIBS:board-cache
+EELAYER 25 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date ""
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L GNDREF #PWR01
+U 1 1 58CC23A1
+P -1203000 -885850
+F 0 "#PWR01" H -1203000 -886100 50  0001 C CNN
+F 1 "GNDREF" H -1203000 -886000 50  0000 C CNN
+F 2 "" H -1203000 -885850 50  0001 C CNN
+F 3 "" H -1203000 -885850 50  0001 C CNN
+	1    -1203000 -885850
+	1    0    0    -1  
+$EndComp
+$Comp
+L Teensy3.2 U1
+U 1 1 58CE54FA
+P 6100 3000
+F 0 "U1" H 6100 4500 60  0000 C CNN
+F 1 "Teensy3.2" H 6100 1500 60  0000 C CNN
+F 2 "teensy:TEENSY-3.2" H 6100 2200 60  0001 C CNN
+F 3 "" H 6100 2200 60  0000 C CNN
+	1    6100 3000
+	1    0    0    -1  
+$EndComp
+$Comp
+L Adafruit5VmicroSD X5
+U 1 1 58CE6620
+P 4500 2000
+F 0 "X5" H 4500 2100 60  0000 C CNN
+F 1 "Adafruit5VmicroSD" H 4500 2000 60  0000 C CNN
+F 2 "adafruit:adafruit_5v_microsd_breakout" H 4500 2000 60  0001 C CNN
+F 3 "" H 4500 2000 60  0001 C CNN
+	1    4500 2000
+	0    1    1    0   
+$EndComp
+$Comp
+L AdafruitLSM303DLHC X4
+U 1 1 58CE7602
+P 4200 5450
+F 0 "X4" H 4200 5550 60  0000 C CNN
+F 1 "AdafruitLSM303DLHC" H 4200 5450 60  0000 C CNN
+F 2 "adafruit:adafruit_lsm303dlhc_accel" H 4200 5450 60  0001 C CNN
+F 3 "" H 4200 5450 60  0001 C CNN
+	1    4200 5450
+	-1   0    0    1   
+$EndComp
+$Comp
+L NeopixelConn X6
+U 1 1 58CE7C62
+P 8800 4250
+F 0 "X6" H 8800 4350 60  0000 C CNN
+F 1 "NeopixelConn" H 8800 4250 60  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x03_Pitch2.54mm" H 8800 4250 60  0001 C CNN
+F 3 "" H 8800 4250 60  0001 C CNN
+	1    8800 4250
+	0    1    1    0   
+$EndComp
+$Comp
+L AdafruitPAM8302A X1
+U 1 1 58CE8183
+P 1050 3050
+F 0 "X1" H 1050 3150 60  0000 C CNN
+F 1 "AdafruitPAM8302A" H 1050 3050 60  0000 C CNN
+F 2 "adafruit:adafruit_PAM8302A" H 1050 3050 60  0001 C CNN
+F 3 "" H 1050 3050 60  0001 C CNN
+	1    1050 3050
+	-1   0    0    1   
+$EndComp
+$Comp
+L vibr_motor X3
+U 1 1 58CE86CC
+P 2250 3550
+F 0 "X3" H 2250 3650 60  0000 C CNN
+F 1 "vibr_motor" H 2250 3550 60  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x02_Pitch2.54mm" H 2250 3550 60  0001 C CNN
+F 3 "" H 2250 3550 60  0001 C CNN
+	1    2250 3550
+	0    -1   -1   0   
+$EndComp
+$Comp
+L +5V #PWR02
+U 1 1 58CF8A73
+P 8300 2450
+F 0 "#PWR02" H 8300 2300 50  0001 C CNN
+F 1 "+5V" H 8300 2590 50  0000 C CNN
+F 2 "" H 8300 2450 50  0000 C CNN
+F 3 "" H 8300 2450 50  0000 C CNN
+	1    8300 2450
+	0    1    1    0   
+$EndComp
+$Comp
+L +5V #PWR03
+U 1 1 58CF8B29
+P 8300 4200
+F 0 "#PWR03" H 8300 4050 50  0001 C CNN
+F 1 "+5V" H 8300 4340 50  0000 C CNN
+F 2 "" H 8300 4200 50  0000 C CNN
+F 3 "" H 8300 4200 50  0000 C CNN
+	1    8300 4200
+	0    -1   -1   0   
+$EndComp
+$Comp
+L +5V #PWR04
+U 1 1 58CF8C1E
+P 1550 2600
+F 0 "#PWR04" H 1550 2450 50  0001 C CNN
+F 1 "+5V" H 1550 2740 50  0000 C CNN
+F 2 "" H 1550 2600 50  0000 C CNN
+F 3 "" H 1550 2600 50  0000 C CNN
+	1    1550 2600
+	0    1    1    0   
+$EndComp
+$Comp
+L +5V #PWR05
+U 1 1 58CF907D
+P 7100 3800
+F 0 "#PWR05" H 7100 3650 50  0001 C CNN
+F 1 "+5V" H 7100 3940 50  0000 C CNN
+F 2 "" H 7100 3800 50  0000 C CNN
+F 3 "" H 7100 3800 50  0000 C CNN
+	1    7100 3800
+	0    1    1    0   
+$EndComp
+$Comp
+L +3.3V #PWR06
+U 1 1 58CF91BC
+P 7100 4000
+F 0 "#PWR06" H 7100 3850 50  0001 C CNN
+F 1 "+3.3V" H 7100 4140 50  0000 C CNN
+F 2 "" H 7100 4000 50  0000 C CNN
+F 3 "" H 7100 4000 50  0000 C CNN
+	1    7100 4000
+	0    1    1    0   
+$EndComp
+$Comp
+L +3.3V #PWR07
+U 1 1 58CF923B
+P 4600 4700
+F 0 "#PWR07" H 4600 4550 50  0001 C CNN
+F 1 "+3.3V" H 4600 4840 50  0000 C CNN
+F 2 "" H 4600 4700 50  0000 C CNN
+F 3 "" H 4600 4700 50  0000 C CNN
+	1    4600 4700
+	1    0    0    -1  
+$EndComp
+$Comp
+L +5V #PWR08
+U 1 1 58CF9411
+P 3700 2500
+F 0 "#PWR08" H 3700 2350 50  0001 C CNN
+F 1 "+5V" H 3700 2640 50  0000 C CNN
+F 2 "" H 3700 2500 50  0000 C CNN
+F 3 "" H 3700 2500 50  0000 C CNN
+	1    3700 2500
+	-1   0    0    1   
+$EndComp
+$Comp
+L GND #PWR09
+U 1 1 58CF9C99
+P 8300 4300
+F 0 "#PWR09" H 8300 4050 50  0001 C CNN
+F 1 "GND" H 8300 4150 50  0000 C CNN
+F 2 "" H 8300 4300 50  0000 C CNN
+F 3 "" H 8300 4300 50  0000 C CNN
+	1    8300 4300
+	0    1    1    0   
+$EndComp
+$Comp
+L GND #PWR010
+U 1 1 58CF9D0D
+P 4400 4700
+F 0 "#PWR010" H 4400 4450 50  0001 C CNN
+F 1 "GND" H 4400 4550 50  0000 C CNN
+F 2 "" H 4400 4700 50  0000 C CNN
+F 3 "" H 4400 4700 50  0000 C CNN
+	1    4400 4700
+	-1   0    0    1   
+$EndComp
+$Comp
+L GND #PWR011
+U 1 1 58CFA031
+P 5100 3300
+F 0 "#PWR011" H 5100 3050 50  0001 C CNN
+F 1 "GND" H 5100 3150 50  0000 C CNN
+F 2 "" H 5100 3300 50  0000 C CNN
+F 3 "" H 5100 3300 50  0000 C CNN
+	1    5100 3300
+	0    1    1    0   
+$EndComp
+$Comp
+L GND #PWR012
+U 1 1 58CFA07A
+P 3900 2500
+F 0 "#PWR012" H 3900 2250 50  0001 C CNN
+F 1 "GND" H 3900 2350 50  0000 C CNN
+F 2 "" H 3900 2500 50  0000 C CNN
+F 3 "" H 3900 2500 50  0000 C CNN
+	1    3900 2500
+	1    0    0    -1  
+$EndComp
+$Comp
+L GND #PWR013
+U 1 1 58CFA18D
+P 1550 2500
+F 0 "#PWR013" H 1550 2250 50  0001 C CNN
+F 1 "GND" H 1550 2350 50  0000 C CNN
+F 2 "" H 1550 2500 50  0000 C CNN
+F 3 "" H 1550 2500 50  0000 C CNN
+	1    1550 2500
+	0    -1   -1   0   
+$EndComp
+$Comp
+L GND #PWR014
+U 1 1 58CFA1B5
+P 1550 2800
+F 0 "#PWR014" H 1550 2550 50  0001 C CNN
+F 1 "GND" H 1550 2650 50  0000 C CNN
+F 2 "" H 1550 2800 50  0000 C CNN
+F 3 "" H 1550 2800 50  0000 C CNN
+	1    1550 2800
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	4300 2500 4300 2800
+Wire Wire Line
+	4300 2800 5100 2800
+Wire Wire Line
+	4200 2500 4200 2900
+Wire Wire Line
+	4200 2900 5100 2900
+Wire Wire Line
+	4100 2500 4100 3000
+Wire Wire Line
+	4100 3000 5100 3000
+Wire Wire Line
+	4000 2500 4000 3600
+Wire Wire Line
+	4000 3600 5100 3600
+Wire Wire Line
+	4300 4700 4300 4200
+Wire Wire Line
+	4300 4200 5100 4200
+Wire Wire Line
+	4200 4700 4200 4100
+Wire Wire Line
+	4200 4100 5100 4100
+Text Notes 1150 1900 0    60   ~ 0
+Il Teensy è 3.3 V\nPer l'input non è un problema (è 5V tolerant)\nma controlla che la microSD accetti 3.3V di input
+Wire Notes Line
+	3500 1800 4200 1800
+Wire Notes Line
+	4200 1800 4200 2300
+Wire Notes Line
+	3500 1850 4000 1850
+Wire Notes Line
+	4000 1850 4000 2300
+Wire Notes Line
+	3500 1750 4300 1750
+Wire Notes Line
+	4300 1750 4300 2300
+Wire Wire Line
+	7100 4100 7550 4100
+$Comp
+L R R1
+U 1 1 58CFBA68
+P 7550 3950
+F 0 "R1" V 7450 3950 50  0000 C CNN
+F 1 "33k" V 7550 3950 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206_HandSoldering" V 7480 3950 50  0001 C CNN
+F 3 "" H 7550 3950 50  0000 C CNN
+	1    7550 3950
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R2
+U 1 1 58CFBAB1
+P 7950 3950
+F 0 "R2" V 8030 3950 50  0000 C CNN
+F 1 "33k" V 7950 3950 50  0000 C CNN
+F 2 "Resistors_SMD:R_1206_HandSoldering" V 7880 3950 50  0001 C CNN
+F 3 "" H 7950 3950 50  0000 C CNN
+	1    7950 3950
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7950 4100 8300 4100
+$Comp
+L +3.3V #PWR015
+U 1 1 58CFBB4F
+P 7550 3800
+F 0 "#PWR015" H 7550 3650 50  0001 C CNN
+F 1 "+3.3V" H 7550 3940 50  0000 C CNN
+F 2 "" H 7550 3800 50  0000 C CNN
+F 3 "" H 7550 3800 50  0000 C CNN
+	1    7550 3800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7750 3800 7550 3800
+$Comp
+L +5V #PWR016
+U 1 1 58CFBBEA
+P 7950 3800
+F 0 "#PWR016" H 7950 3650 50  0001 C CNN
+F 1 "+5V" H 7950 3940 50  0000 C CNN
+F 2 "" H 7950 3800 50  0000 C CNN
+F 3 "" H 7950 3800 50  0000 C CNN
+	1    7950 3800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2650 3600 3500 3600
+$Comp
+L +3.3V #PWR017
+U 1 1 58CFBFB4
+P 2650 3500
+F 0 "#PWR017" H 2650 3350 50  0001 C CNN
+F 1 "+3.3V" H 2650 3640 50  0000 C CNN
+F 2 "" H 2650 3500 50  0000 C CNN
+F 3 "" H 2650 3500 50  0000 C CNN
+	1    2650 3500
+	1    0    0    -1  
+$EndComp
+$Comp
+L GND #PWR018
+U 1 1 58CFBFE9
+P 3500 4100
+F 0 "#PWR018" H 3500 3850 50  0001 C CNN
+F 1 "GND" H 3500 3950 50  0000 C CNN
+F 2 "" H 3500 4100 50  0000 C CNN
+F 3 "" H 3500 4100 50  0000 C CNN
+	1    3500 4100
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	1550 2900 3850 2900
+Wire Wire Line
+	3850 2900 3850 3500
+Wire Wire Line
+	3850 3500 5100 3500
+$Comp
+L vibr_motor X2
+U 1 1 58CFC6F6
+P 2250 4050
+F 0 "X2" H 2250 4150 60  0000 C CNN
+F 1 "vibr_motor" H 2250 4050 60  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x02_Pitch2.54mm" H 2250 4050 60  0001 C CNN
+F 3 "" H 2250 4050 60  0001 C CNN
+	1    2250 4050
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	2650 4100 2900 4100
+$Comp
+L +3.3V #PWR019
+U 1 1 58CFC703
+P 2650 4000
+F 0 "#PWR019" H 2650 3850 50  0001 C CNN
+F 1 "+3.3V" H 2650 4140 50  0000 C CNN
+F 2 "" H 2650 4000 50  0000 C CNN
+F 3 "" H 2650 4000 50  0000 C CNN
+	1    2650 4000
+	1    0    0    -1  
+$EndComp
+Text Notes 5500 5800 0    60   ~ 0
+Siamo sicuri di non consumare complessivamente\npiù di 100 mA? I motori un po' consumeranno...\nSenza datasheet ti conviene alimentarli e guardare\nquanta corrente consumano
+Wire Notes Line
+	6900 4000 7050 4000
+Wire Notes Line
+	7050 4000 7050 5400
+$Comp
+L D D1
+U 1 1 58CFC70F
+P 3200 3800
+F 0 "D1" H 3200 3900 50  0000 C CNN
+F 1 "D" H 3200 3700 50  0000 C CNN
+F 2 "Diodes_SMD:D_1206" H 3200 3800 50  0001 C CNN
+F 3 "" H 3200 3800 50  0000 C CNN
+	1    3200 3800
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	3500 3600 3500 3700
+$Comp
+L GND #PWR020
+U 1 1 58D13DF7
+P 3200 3950
+F 0 "#PWR020" H 3200 3700 50  0001 C CNN
+F 1 "GND" H 3200 3800 50  0000 C CNN
+F 2 "" H 3200 3950 50  0000 C CNN
+F 3 "" H 3200 3950 50  0000 C CNN
+	1    3200 3950
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2900 4100 2900 3600
+Connection ~ 2900 3600
+NoConn ~ 1550 2700
+$Comp
+L AdafruitPowerboost500 PS1
+U 1 1 58D144FE
+P 8050 2100
+F 0 "PS1" H 8050 1650 60  0000 C CNN
+F 1 "AdafruitPowerboost500" H 8050 1550 60  0000 C CNN
+F 2 "adafruit:adafruit_powerboost_500" H 8050 2450 60  0001 C CNN
+F 3 "" H 8050 2450 60  0001 C CNN
+	1    8050 2100
+	0    1    1    0   
+$EndComp
+$Comp
+L GND #PWR021
+U 1 1 58D1473E
+P 8300 2350
+F 0 "#PWR021" H 8300 2100 50  0001 C CNN
+F 1 "GND" H 8300 2200 50  0000 C CNN
+F 2 "" H 8300 2350 50  0001 C CNN
+F 3 "" H 8300 2350 50  0001 C CNN
+	1    8300 2350
+	0    -1   -1   0   
+$EndComp
+$Comp
+L CONN_01X02 J1
+U 1 1 58D147B0
+P 9050 2100
+F 0 "J1" H 9050 2250 50  0000 C CNN
+F 1 "CONN_01X02" V 9150 2100 50  0000 C CNN
+F 2 "Pin_Headers:Pin_Header_Straight_1x02_Pitch2.54mm" H 9050 2100 50  0001 C CNN
+F 3 "" H 9050 2100 50  0001 C CNN
+	1    9050 2100
+	1    0    0    -1  
+$EndComp
+$Comp
+L GND #PWR022
+U 1 1 58D14837
+P 8850 2150
+F 0 "#PWR022" H 8850 1900 50  0001 C CNN
+F 1 "GND" H 8850 2000 50  0000 C CNN
+F 2 "" H 8850 2150 50  0001 C CNN
+F 3 "" H 8850 2150 50  0001 C CNN
+	1    8850 2150
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8300 2050 8850 2050
+$Comp
+L C C1
+U 1 1 58D15FD7
+P 8650 2200
+F 0 "C1" H 8675 2300 50  0000 L CNN
+F 1 "C" H 8675 2100 50  0000 L CNN
+F 2 "Capacitors_SMD:C_1206_HandSoldering" H 8688 2050 50  0001 C CNN
+F 3 "" H 8650 2200 50  0001 C CNN
+	1    8650 2200
+	1    0    0    -1  
+$EndComp
+Connection ~ 8650 2050
+$Comp
+L GND #PWR023
+U 1 1 58D16092
+P 8650 2350
+F 0 "#PWR023" H 8650 2100 50  0001 C CNN
+F 1 "GND" H 8650 2200 50  0000 C CNN
+F 2 "" H 8650 2350 50  0001 C CNN
+F 3 "" H 8650 2350 50  0001 C CNN
+	1    8650 2350
+	1    0    0    -1  
+$EndComp
+Text GLabel 8300 2250 2    60   Input ~ 0
+LB
+Text GLabel 8300 3100 0    60   Input ~ 0
+LB
+Wire Wire Line
+	3800 3900 5100 3900
+Wire Wire Line
+	3200 3650 3200 3600
+Connection ~ 3200 3600
+$Comp
+L Q_NMOS_GSD Q2
+U 1 1 58D8131B
+P 7750 4000
+F 0 "Q2" H 7950 4050 50  0000 L CNN
+F 1 "Q_NMOS_GSD" H 7950 3950 50  0000 L CNN
+F 2 "TO_SOT_Packages_SMD:SOT-23_Handsoldering" H 7950 4100 50  0001 C CNN
+F 3 "" H 7750 4000 50  0000 C CNN
+	1    7750 4000
+	0    1    1    0   
+$EndComp
+$Comp
+L Q_NMOS_GDS Q1
+U 1 1 58D816BC
+P 3600 3900
+F 0 "Q1" H 3800 3950 50  0000 L CNN
+F 1 "Q_NMOS_GDS" H 3800 3850 50  0000 L CNN
+F 2 "TO_SOT_Packages_SMD:SOT-404" H 3800 4000 50  0001 C CNN
+F 3 "" H 3600 3900 50  0000 C CNN
+	1    3600 3900
+	-1   0    0    -1  
+$EndComp
+$EndSCHEMATC

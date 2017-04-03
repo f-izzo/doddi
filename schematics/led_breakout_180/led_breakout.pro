@@ -1,4 +1,4 @@
-update=Thu 16 Mar 2017 08:51:05 PM CET
+update=Thu 30 Mar 2017 07:10:54 PM CEST
 version=1
 last_client=kicad
 [pcbnew]
@@ -23,9 +23,11 @@ ModuleOutlineThickness=0.150000000000
 [cvpcb]
 version=1
 NetIExt=net
+[general]
+version=1
 [eeschema]
 version=1
-LibDir=
+LibDir=/home/fede/Documents/Kicad/Libraries
 [eeschema/libraries]
 LibName1=power
 LibName2=device
@@ -56,5 +58,5 @@ LibName26=opto
 LibName27=atmel
 LibName28=contrib
 LibName29=valves
-[general]
-version=1
+LibName30=adafruit+pololu
+LibName31=/home/fede/Documents/Kicad/LED_RGB/LED_RGB
