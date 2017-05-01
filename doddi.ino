@@ -1,5 +1,6 @@
 #define PIN            23   // Pin on the Arduino connected to the NeoPixels
-#define NUMPIXELS      12   //Number of NeoPixels attached to the Arduino
+#define NUMPIXELS      8   //Number of NeoPixels attached to the Arduino
+//#define ACCEL
 
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
@@ -15,15 +16,17 @@
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_RGB + NEO_KHZ800);
 
+#ifdef ACCEL
 /* Assign a unique ID to this sensor */
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
+#endif
 
 AudioPlaySdWav           playSdWav1;
 AudioOutputAnalog        dac1;
 AudioConnection          patchCord1(playSdWav1, 0, dac1, 0);
 
 //faces coordinates
-static const int16_t PROGMEM gtable[12][3] = {
+static const float PROGMEM gtable[12][3] = {
   {  8.1, 0.4, 5.45 }, //  1
   {  4.1, 9.1,   0.2}, //  2
   {   8.3,  0.6,   -5.4}, //  3
@@ -52,6 +55,7 @@ typedef struct face{
 } face;
 
 const uint32_t yellow = pixels.Color(255, 255, 0);
+const uint32_t red = pixels.Color(200, 0, 0);
 const uint32_t green = pixels.Color(0, 200, 0);
 const uint32_t blue = pixels.Color(0, 0, 200);
 const uint32_t purple = pixels.Color(150, 0, 150);
@@ -66,6 +70,7 @@ int8_t activeF = 1;
 //Faces' states structure array
 face F[12] = {0};
 
+#ifdef ACCEL
 void displaySensorDetails(void)
 {
   sensor_t sensor;
@@ -79,8 +84,9 @@ void displaySensorDetails(void)
   Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" m/s^2");
   Serial.println("------------------------------------");
   Serial.println("");
-  //  delay(500);
 }
+#endif
+
 void setAllPixels(uint32_t color) {
   for (int i = 0; i < NUMPIXELS; i++) {
     pixels.setPixelColor(i, color);
@@ -88,6 +94,7 @@ void setAllPixels(uint32_t color) {
     delay(50);
   }
 }
+
 uint8_t splitColor ( uint32_t c, char value )
 {
   switch ( value ) {
@@ -103,8 +110,8 @@ void setup(void) {
   pinMode (vib1, OUTPUT);
   pinMode (vib2, OUTPUT);
   AudioMemory(100);
-  SPI.begin();
   Serial.begin(9600);
+  SPI.begin();
   while(!(SD.begin(10))) {
     Serial.println("Unable to access the SD card");
     delay(500);
@@ -112,35 +119,38 @@ void setup(void) {
   pixels.begin();
   // turn off all the pixels
   pixels.show();
+  #ifdef ACCEL
   if (!accel.begin())
   {
     Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
     while (1);
   }
-  //displaySensorDetails();
+  displaySensorDetails();
+  #endif
 
   /* Data structure initialization */
   // Initialize faces array
   memset(&F, 0, 12 * sizeof(face));
+  randomSeed(analogRead(A7));
   // Random assignment of resources to faces.
   for(int i = 0; i < 12; i++) {
-    F[i].resID = random(0, 3);
+    F[i].resID = random(4);
   }
   // Set resource color to faces based on resID
   for (int i = 0; i < 12; i++) {
     switch(F[i].resID)
     {
       case 0:
-        F[i].color = yellow;
-        break;
-      case 1:
-        F[i].color = green;
-        break;
-      case 2:
         F[i].color = blue;
         break;
-      case 3:
+      case 1:
+        F[i].color = yellow;
+        break;
+      case 2:
         F[i].color = green;
+        break;
+      case 3:
+        F[i].color = red;
         break;
     }
   }
@@ -149,27 +159,25 @@ void setup(void) {
 void loop(void)
 {
   /* Game start */
-  boolean start = shake(50, 150, 1);
-  // Old game start condition temporarily replaced with delay
-  /*while (!start) {
-    Serial.println("Waiting for start... ");
+  boolean start;
+  do{
+    Serial.print("Waiting for start... ");
     Serial.println(start);
-    //delay(1000);
     start = shake(50, 150, 1);
-  }*/
-  //TODO: remove this delay once start condition is ready
-  delay(10000);
+  }while(!start);
   Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
-  // sound.play("1.wav");
   Serial.println("Start playing");
   playSdWav1.play("start1.wav");
   delay(50); // wait for library to parse WAV info
   setAllPixels(purple);
+  delay(500); //Delay to make game slower
 
   //TODO: Add main game loop
+  #ifdef ACCEL
   /* Get a new sensor event */
   sensors_event_t event;
   accel.getEvent(&event);
+  #endif
   /* Display the results (acceleration is measured in m/s^2) */
   //  Serial.print("X: "); Serial.print(event.acceleration.x); Serial.print("  ");
   //  Serial.print("Y: "); Serial.print(event.acceleration.y); Serial.print("  ");
@@ -177,7 +185,7 @@ void loop(void)
   //  delay(10);
 
   // Set faces color to corresponding resources
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < NUMPIXELS; i++) {
     if (F[i].isActive == 0) {
       pixels.setPixelColor(i, F[i].color);
     }
@@ -188,12 +196,10 @@ void loop(void)
   while (endgame) {
     Serial.print("End Game:           enter animation");
     Serial.println(endgame);
-
     Serial.println("Starting minigames ");
     playSdWav1.play("start1.wav");   //starting minigame sound
     delay(50); // wait for library to parse WAV info
-    //delay(1000);
-    // animation
+    // "animation"
     for (int i = 0; i < 3; i++) {
       setAllPixels(purple);
       setAllPixels(off);
@@ -205,7 +211,9 @@ void loop(void)
     //playSdWav1.play("win.wav");
     //delay(50); // wait for library to parse WAV info
   }
+  #ifdef ACCEL
   activeF = getFace();
+  #endif
   Serial.print("Face: ");
   Serial.print(activeF + 1);
   Serial.print("    ");
@@ -273,7 +281,9 @@ uint32_t getFace(void) {
   int16_t  fX, fY, fZ;
   uint8_t  i, iMin = 0;
   sensors_event_t event;
+  #ifdef ACCEL
   accel.getEvent(&event);
+  #endif
 
   for ( i = 0; i < 12; i++) { // For each face...
     fX = pgm_read_word(&gtable[i][0]); // Read face X/Y/Z
@@ -294,6 +304,7 @@ uint32_t getFace(void) {
 }
 
 //shake detection
+#ifdef ACCEL
 boolean shake(uint32_t ms, uint32_t timeout, int small) {
   int d = (small)? 80 : 210; //small or big shake
   uint32_t startTime, prevTime, currentTime;
@@ -302,7 +313,9 @@ boolean shake(uint32_t ms, uint32_t timeout, int small) {
 
   // Get initial orientation and time
   sensors_event_t event;
+  #ifdef ACCEL
   accel.getEvent(&event);
+  #endif
   prevX    = event.acceleration.x;
   prevY    = event.acceleration.y;
   prevZ    = event.acceleration.z;
@@ -314,7 +327,9 @@ boolean shake(uint32_t ms, uint32_t timeout, int small) {
   while (((currentTime = millis()) - startTime) < timeout) {
     if ((currentTime - prevTime) >= ms) return false; // Stable!
     sensors_event_t event;
+    #ifdef ACCEL
     accel.getEvent(&event);
+    #endif
     dX = event.acceleration.x - prevX; // X/Y/Z delta from last stable position
     dY = event.acceleration.y - prevY;
     dZ = event.acceleration.z - prevZ;
@@ -329,6 +344,19 @@ boolean shake(uint32_t ms, uint32_t timeout, int small) {
   }
   return true;
 }
+#endif
+#ifndef ACCEL
+// Fake shake detection
+boolean shake(uint32_t ms, uint32_t timeout, int small) {
+  int time = millis();
+  while(Serial.read()== -1 && (millis() - time < timeout))
+  {
+    delay(10);
+  }
+  if(millis() - time < timeout) return true;
+  else return false;
+}
+#endif
 
 void game() {
   setAllPixels(off);
