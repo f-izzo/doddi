@@ -1,6 +1,6 @@
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
-#include <TeensyThreads.h>
+//#include <TeensyThreads.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>
@@ -14,6 +14,7 @@
 //#include <SerialFlash.h>
 
 //#define ACCEL
+#define ACCEL_DEBUG
 #define vib 16
 #define INTERRUPT_PIN  5
 #define PIN            23   // Pin on the Arduino connected to the NeoPixels
@@ -29,19 +30,19 @@ AudioOutputAnalog        dac1;
 AudioConnection          patchCord1(playSdWav1, 0, dac1, 0);
 
 //faces coordinates
-static const float PROGMEM gtable[12][3] = {
-  {  0.0,  5.0,  -2.0},//  1
-  {  0.0,  20.0, 50.0}, //  2
-  {  0.0,  64.0,  -5.0},//  3
-  {  0.0,  10.0,  60.0},//  4
-  {  0.0,  40.0,  24.0}, //  5
-  {  0.0,  34.0,  28.0}, //  6
-  {  0.0,  50.0,  30.0}, //  7
-  {  0.0,  40.0, -30.0}, //  8
-  {  0.0, -15.0, -60.0}, //  9
-  {  0.0, -69.0,   0.0}, //  10
-  {  0.0, -15.0,  60.0},    // 11
-  {  0.0,  0.0 ,  0.0}, // 12
+const int facesYZ[12][2] = {
+  { 5,  -2}, //  1
+  { 20, 50}, //  2
+  { 64,  -5},//  3
+  { 10,  60},//  4
+  { 40,  24}, //  5
+  { 34,  28}, //  6
+  { 50,  30}, //  7
+  { 40, -30}, //  8
+  {-15, -60}, //  9
+  {-69,   0}, //  10
+  {-15,  60},    // 11
+  { 0 ,  0}, // 12
 };
 
 typedef struct color{
@@ -76,38 +77,25 @@ float final_ypr[3];
 volatile bool mpuInterrupt = false;
 
 // game global vars
+boolean start = false;
 boolean endgame = false;
 boolean faceChange = false;
 uint8_t activeF = 0;
 face F[12] = {0};
 
 void maingame() {
-  while(1){
   /* Game start */
-  boolean start;
-  do{
-    //Serial.print("Waiting for start... ");
-    Serial.println(start);
-    start = shake(50, 150, 1);
-  }while(!start);
+  Serial.print("Waiting for start... ");
+  Serial.println(start);
+  start = shake(50, 150, 1);
+  if(!start) return;
+
   Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
   Serial.println("Start playing");
   playSdWav1.play("start1.wav");
   delay(50); // wait for library to parse WAV info
   setAllPixels(purple);
   delay(500); //Delay to make game slower
-
-  //TODO: Add main game loop
-  #ifdef ACCEL
-  /* Get a new sensor event */
-  sensors_event_t event;
-  accel.getEvent(&event);
-  #endif
-  /* Display the results (acceleration is measured in m/s^2) */
-  //  Serial.print("X: "); Serial.print(event.acceleration.x); Serial.print("  ");
-  //  Serial.print("Y: "); Serial.print(event.acceleration.y); Serial.print("  ");
-  //  Serial.print("Z: "); Serial.print(event.acceleration.z); Serial.print("  ");Serial.println("m/s^2 ");
-  //  delay(10);
 
   // Set faces color to corresponding resources
   for (int i = 0; i < NUMPIXELS; i++) {
@@ -196,7 +184,6 @@ void maingame() {
     activ = shake(50, 100, 0);
     //delay(1000);
   }
-}
 }
 
 void arrayInit() {
@@ -306,9 +293,9 @@ void loop() {
   float ypr[3];
   if (!dmpReady) return;
     while (!mpuInterrupt && fifoCount < packetSize) {
-        // other program behavior stuff here
+        // The game code is executed while the accelerometer is not working
+        maingame();
     }
-    //if (!mpuInterrupt && fifoCount < packetSize) continue;
     mpuInterrupt = false;
     mpuIntStatus = mpu.getIntStatus();
     fifoCount = mpu.getFIFOCount();
@@ -331,31 +318,34 @@ void loop() {
           final_euler[i] = euler[i] * 180/M_PI;
           final_ypr[i] = ypr[i] * 180/M_PI;
         }
+        #ifdef ACCEL_DEBUG
         Serial.print("euler\t");
         Serial.print(euler[0] * 180/M_PI);
         Serial.print("\t");
         Serial.print(euler[1] * 180/M_PI);
         Serial.print("\t");
         Serial.println(euler[2] * 180/M_PI);
-        //int newF = getFace();
-        //if(newF != activeF) {
-          //activeF = newF;
-          //Serial.print("Active face: ");
-          //Serial.println(activeF);
-        //}
+        #endif
+        int newF = getFace();
+        if(newF != activeF) {
+          activeF = newF;
+          Serial.print("Active face: ");
+          Serial.println(activeF);
+        }
     }
 }
 
 int getFace() {
-  int d, iMin, dMin = 999999;
+  int d, iMin = 0, dMin = 999999;
   float fY, fZ, dY, dZ;
   
   for (int i=0; i < 12; i++) { // For each face...
-    fY = pgm_read_word(&gtable[i][1]); // Read y and z coordinates
-    fZ = pgm_read_word(&gtable[i][2]); // from PROGMEM
+    fY = (float)facesYZ[i][0]; // Read y and z coordinates
+    fZ = (float)facesYZ[i][1];
     dY = final_euler[1] - fY; // Delta between accelerometer & face
     dZ = final_euler[2] - fZ; // Delta between accelerometer & face
     d  = dY * dY + dZ * dZ; // Distance^2
+    Serial.println(d);
     // Check if this face is the closest match so far.  Because
     // we're comparing RELATIVE distances, sqrt() can be avoided.
     if (d < dMin) { // New closest match?
