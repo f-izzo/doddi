@@ -1,7 +1,6 @@
-#define PIN            23   // Pin on the Arduino connected to the NeoPixels
-#define NUMPIXELS      8   //Number of NeoPixels attached to the Arduino
-//#define ACCEL
-
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps20.h"
+#include <TeensyThreads.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303_U.h>
@@ -14,12 +13,16 @@
 #include <SD.h>
 //#include <SerialFlash.h>
 
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_RGB + NEO_KHZ800);
+//#define ACCEL
+#define vib 16
+#define INTERRUPT_PIN  5
+#define PIN            23   // Pin on the Arduino connected to the NeoPixels
+#define NUMPIXELS      8   //Number of NeoPixels attached to the Arduino
 
-#ifdef ACCEL
-/* Assign a unique ID to this sensor */
-Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
-#endif
+boolean shake(uint32_t ms, uint32_t timeout, int small);
+
+MPU6050 mpu;
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_RGB + NEO_KHZ800);
 
 AudioPlaySdWav           playSdWav1;
 AudioOutputAnalog        dac1;
@@ -61,103 +64,24 @@ const uint32_t blue = pixels.Color(0, 0, 200);
 const uint32_t purple = pixels.Color(150, 0, 150);
 const uint32_t off = pixels.Color(0, 0, 0);
 
-const int vib1 = 16;
-const int vib2 = 17;
-int faceChange = 1;
-boolean endgame = false;
-int8_t activeF = 1;
+// MPU control/status vars
+bool dmpReady = false;  // set true if DMP init was successful
+uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
+uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
+uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
+uint16_t fifoCount;     // count of all bytes currently in FIFO
+uint8_t fifoBuffer[64]; // FIFO storage buffer
+volatile bool mpuInterrupt = false;
 
-//Faces' states structure array
+// game global vars
+boolean endgame = false;
+boolean faceChange = false;
+int8_t activeF = 1;
 face F[12] = {0};
 
-#ifdef ACCEL
-void displaySensorDetails(void)
-{
-  sensor_t sensor;
-  accel.getSensor(&sensor);
-  Serial.println("------------------------------------");
-  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-  Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-  Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-  Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" m/s^2");
-  Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" m/s^2");
-  Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" m/s^2");
-  Serial.println("------------------------------------");
-  Serial.println("");
-}
-#endif
-
-void setAllPixels(uint32_t color) {
-  for (int i = 0; i < NUMPIXELS; i++) {
-    pixels.setPixelColor(i, color);
-    pixels.show();
-    delay(50);
-  }
-}
-
-uint8_t splitColor ( uint32_t c, char value )
-{
-  switch ( value ) {
-    case 'r': return (uint8_t)(c >> 16);
-    case 'g': return (uint8_t)(c >>  8);
-    case 'b': return (uint8_t)(c >>  0);
-    default:  return 0;
-  }
-}
-
-void setup(void) {
-  /* Hardware initialization */
-  pinMode (vib1, OUTPUT);
-  pinMode (vib2, OUTPUT);
-  AudioMemory(100);
-  Serial.begin(9600);
-  SPI.begin();
-  while(!(SD.begin(10))) {
-    Serial.println("Unable to access the SD card");
-    delay(500);
-  }
-  pixels.begin();
-  // turn off all the pixels
-  pixels.show();
-  #ifdef ACCEL
-  if (!accel.begin())
-  {
-    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
-    while (1);
-  }
-  displaySensorDetails();
-  #endif
-
-  /* Data structure initialization */
-  // Initialize faces array
-  memset(&F, 0, 12 * sizeof(face));
-  randomSeed(analogRead(A7));
-  // Random assignment of resources to faces.
-  for(int i = 0; i < 12; i++) {
-    F[i].resID = random(4);
-  }
-  // Set resource color to faces based on resID
-  for (int i = 0; i < 12; i++) {
-    switch(F[i].resID)
-    {
-      case 0:
-        F[i].color = blue;
-        break;
-      case 1:
-        F[i].color = yellow;
-        break;
-      case 2:
-        F[i].color = green;
-        break;
-      case 3:
-        F[i].color = red;
-        break;
-    }
-  }
-}
-
-void loop(void)
-{
+void maingame() {
+  while(1){
+  // Game code
   /* Game start */
   boolean start;
   do{
@@ -188,11 +112,13 @@ void loop(void)
   for (int i = 0; i < NUMPIXELS; i++) {
     if (F[i].isActive == 0) {
       pixels.setPixelColor(i, F[i].color);
+      pixels.show();
+      delay(50);
     }
   }
-  pixels.show();
-
-  boolean endgame = shake(50, 120, 1);
+  
+  //NOTE nonsense
+  /*boolean endgame = shake(50, 120, 1);
   while (endgame) {
     Serial.print("End Game:           enter animation");
     Serial.println(endgame);
@@ -210,7 +136,7 @@ void loop(void)
     Serial.println("End playing");
     //playSdWav1.play("win.wav");
     //delay(50); // wait for library to parse WAV info
-  }
+  }*/
   #ifdef ACCEL
   activeF = getFace();
   #endif
@@ -238,11 +164,9 @@ void loop(void)
   {
     Serial.println("the face has changed");
     faceChange = activeF;
-    digitalWrite(vib1, HIGH);
-    digitalWrite(vib2, HIGH);
+    digitalWrite(vib, HIGH);
     delay(150);
-    digitalWrite(vib1, LOW);
-    digitalWrite(vib2, LOW);
+    digitalWrite(vib, LOW);
   }
   //Face activation sequence
   while (activ) {
@@ -275,8 +199,159 @@ void loop(void)
     //delay(1000);
   }
 }
+}
 
-uint32_t getFace(void) {
+void arrayInit() {
+  // Initialize faces array
+  memset(&F, 0, 12 * sizeof(face));
+  randomSeed(analogRead(A7));
+  // Random assignment of resources to faces.
+  for(int i = 0; i < 12; i++) {
+    F[i].resID = random(4);
+  }
+  // Set resource color to faces based on resID
+  for (int i = 0; i < 12; i++) {
+    switch(F[i].resID)
+    {
+      case 0:
+        F[i].color = blue;
+        break;
+      case 1:
+        F[i].color = yellow;
+        break;
+      case 2:
+        F[i].color = green;
+        break;
+      case 3:
+        F[i].color = red;
+        break;
+    }
+  }
+}
+
+void setAllPixels(uint32_t color) {
+  for (int i = 0; i < NUMPIXELS; i++) {
+    pixels.setPixelColor(i, color);
+    pixels.show();
+    delay(50);
+  }
+}
+
+uint8_t splitColor ( uint32_t c, char value ) {
+  switch ( value ) {
+    case 'r': return (uint8_t)(c >> 16);
+    case 'g': return (uint8_t)(c >>  8);
+    case 'b': return (uint8_t)(c >>  0);
+    default:  return 0;
+  }
+}
+
+void dmpDataReady() {
+    mpuInterrupt = true;
+}
+
+void accel() {
+  VectorInt16 aa;         //accel sensor measurements
+  VectorFloat gravity;    //gravity vector
+  Quaternion q;
+  float euler[3];
+  float ypr[3];
+  while(1){
+    if (!dmpReady) return;
+    while (!mpuInterrupt && fifoCount < packetSize) {
+        // other program behavior stuff here
+    }
+    //if (!mpuInterrupt && fifoCount < packetSize) continue;
+    mpuInterrupt = false;
+    mpuIntStatus = mpu.getIntStatus();
+    Serial.print("MPU status: ");
+    Serial.println(mpuIntStatus);
+    fifoCount = mpu.getFIFOCount();
+    // check for overflow (this should never happen unless our code is too inefficient)
+    if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
+        // reset so we can continue cleanly
+        mpu.resetFIFO();
+        Serial.println(F("FIFO overflow!"));
+    // otherwise, check for DMP data ready interrupt
+    } else if (mpuIntStatus & 0x02) {
+        while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+        mpu.getFIFOBytes(fifoBuffer, packetSize);
+        fifoCount -= packetSize;
+        mpu.dmpGetQuaternion(&q, fifoBuffer);
+        mpu.dmpGetEuler(euler, &q);
+        mpu.dmpGetGravity(&gravity, &q);
+        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+              Serial.print("euler\t");
+              Serial.print(euler[0] * 180/M_PI);
+              Serial.print("\t");
+              Serial.print(euler[1] * 180/M_PI);
+              Serial.print("\t");
+              Serial.println(euler[2] * 180/M_PI);
+
+              Serial.print("ypr\t");
+              Serial.print(ypr[0] * 180/M_PI);
+              Serial.print("\t");
+              Serial.print(ypr[1] * 180/M_PI);
+              Serial.print("\t");
+              Serial.println(ypr[2] * 180/M_PI);
+    }
+  }
+}
+
+void accelinit() {
+  mpu.initialize();
+  Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+  devStatus = mpu.dmpInitialize();
+  // supply your own gyro offsets here, scaled for min sensitivity
+  mpu.setXGyroOffset(220);
+  mpu.setYGyroOffset(76);
+  mpu.setZGyroOffset(-85);
+  mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+  // make sure it worked (returns 0 if so)
+  if (devStatus == 0) {
+      mpu.setDMPEnabled(true);
+      attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
+      mpuIntStatus = mpu.getIntStatus();
+      dmpReady = true;
+      packetSize = mpu.dmpGetFIFOPacketSize();
+  } else {
+      // ERROR!
+      // 1 = initial memory load failed
+      // 2 = DMP configuration updates failed
+      // (if it's going to break, usually the code will be 1)
+      Serial.print(F("DMP Initialization failed (code "));
+      Serial.print(devStatus);
+      Serial.println(F(")"));
+    }
+}
+
+void setup() {
+  /* Hardware initialization */
+  pinMode(vib, OUTPUT);
+  pinMode(INTERRUPT_PIN, INPUT);
+  pixels.begin();
+  pixels.show();  // turn off all the pixels
+  Serial.begin(9600);
+  SPI.begin();
+  while(!(SD.begin(10))) {
+    Serial.println("Unable to access the SD card");
+    delay(500);
+  }
+  Wire.begin();
+  Wire.setClock(400000);
+  AudioMemory(100);
+  accelinit();
+  /* Data structure initialization */
+  arrayInit();
+  /* Register and start threads */
+  threads.setSliceMillis(200);
+  //threads.addThread(maingame);
+  threads.addThread(accel);
+}
+void loop() {
+}
+
+uint32_t getFace() {
   int32_t  dX, dY, dZ, d, dMin = 999999;
   int16_t  fX, fY, fZ;
   uint8_t  i, iMin = 0;
@@ -358,7 +433,7 @@ boolean shake(uint32_t ms, uint32_t timeout, int small) {
 }
 #endif
 
-void game() {
+void game(){
   setAllPixels(off);
   boolean facesLeft = true;
   int x = 0;
