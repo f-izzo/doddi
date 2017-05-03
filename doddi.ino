@@ -14,7 +14,7 @@
 //#include <SerialFlash.h>
 
 //#define ACCEL
-#define ACCEL_DEBUG
+//#define ACCEL_DEBUG
 #define vib 16
 #define INTERRUPT_PIN  5
 #define PIN            23   // Pin on the Arduino connected to the NeoPixels
@@ -31,18 +31,18 @@ AudioConnection          patchCord1(playSdWav1, 0, dac1, 0);
 
 //faces coordinates
 const int facesYZ[12][2] = {
-  { 5,  -2}, //  1
-  { 20, 50}, //  2
-  { 64,  -5},//  3
-  { 10,  60},//  4
-  { 40,  24}, //  5
-  { 34,  28}, //  6
-  { 50,  30}, //  7
-  { 40, -30}, //  8
-  {-15, -60}, //  9
-  {-69,   0}, //  10
-  {-15,  60},    // 11
-  { 0 ,  0}, // 12
+  { 0,   0}, //  0
+  { 20, 50}, //  1
+  { 60, -3},//  2
+  { 15, -50},//  3
+  {-40, -30}, //  4
+  {-38,  30}, //  5
+  { 50,  30}, //  6
+  { 40, -30}, //  7
+  {-15, -60}, //  8
+  {-69,  -5}, //  9
+  {-15,  60}, // 10
+  { 0 ,  0},  // 11
 };
 
 typedef struct color{
@@ -319,11 +319,13 @@ void loop() {
           final_ypr[i] = ypr[i] * 180/M_PI;
         }
         #ifdef ACCEL_DEBUG
-        Serial.print("euler\t");
-        Serial.print(euler[0] * 180/M_PI);
+        Serial.print("ypr\t");
+        Serial.print(ypr[0] * 180/M_PI);
         Serial.print("\t");
-        Serial.print(euler[1] * 180/M_PI);
+        Serial.print(ypr[1] * 180/M_PI);
         Serial.print("\t");
+        Serial.println(ypr[2] * 180/M_PI);
+        Serial.print("euler z  ");
         Serial.println(euler[2] * 180/M_PI);
         #endif
         int newF = getFace();
@@ -342,10 +344,9 @@ int getFace() {
   for (int i=0; i < 12; i++) { // For each face...
     fY = (float)facesYZ[i][0]; // Read y and z coordinates
     fZ = (float)facesYZ[i][1];
-    dY = final_euler[1] - fY; // Delta between accelerometer & face
-    dZ = final_euler[2] - fZ; // Delta between accelerometer & face
+    dY = final_ypr[1] - fY; // Delta between accelerometer & face
+    dZ = final_ypr[2] - fZ; // Delta between accelerometer & face
     d  = dY * dY + dZ * dZ; // Distance^2
-    Serial.println(d);
     // Check if this face is the closest match so far.  Because
     // we're comparing RELATIVE distances, sqrt() can be avoided.
     if (d < dMin) { // New closest match?
@@ -354,9 +355,9 @@ int getFace() {
     }
   }
   if((iMin == 0) || (iMin == 11)) { //Top and bottom face disambiguation
-    iMin = (final_ypr[2] > 160) ? 11 : 0;
+    int eulerZ = (final_euler[2] > 0) ? final_euler[2] : -final_euler[2];
+    iMin = (final_euler[2] > 160) ? 11 : 0;
   }
-  Serial.println(iMin);
   return iMin; // Index of closest matching face*/
 }
 
