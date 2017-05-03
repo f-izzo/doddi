@@ -30,18 +30,18 @@ AudioConnection          patchCord1(playSdWav1, 0, dac1, 0);
 
 //faces coordinates
 static const float PROGMEM gtable[12][3] = {
-  {  8.1, 0.4, 5.45 }, //  1
-  {  4.1, 9.1,   0.2}, //  2
-  {   8.3,  0.6,   -5.4}, //  3
-  {  5.1,  -8.2,   -0.5}, //  4
-  {  -0.3,  -5.42,  8.4}, //  5
-  { -0.45,   5.3,   8.6}, //  6
-  {  -5.5,  8.5,  -0.3}, //  7
-  {   0.0,  5.2,  -8.9}, //  8
-  {   0.2, -5.3,  -8.8}, //  9
-  {  -5.1, -8.5,  -0.2}, // 10
-  {  -8.8,     0,  5.1}, // 11
-  {  -8.8, -0.2 , -5.7}, // 12
+  {  0.0,  5.0,  -2.0},//  1
+  {  0.0,  20.0, 50.0}, //  2
+  {  0.0,  64.0,  -5.0},//  3
+  {  0.0,  10.0,  60.0},//  4
+  {  0.0,  40.0,  24.0}, //  5
+  {  0.0,  34.0,  28.0}, //  6
+  {  0.0,  50.0,  30.0}, //  7
+  {  0.0,  40.0, -30.0}, //  8
+  {  0.0, -15.0, -60.0}, //  9
+  {  0.0, -69.0,   0.0}, //  10
+  {  0.0, -15.0,  60.0},    // 11
+  {  0.0,  0.0 ,  0.0}, // 12
 };
 
 typedef struct color{
@@ -71,21 +71,22 @@ uint8_t devStatus;      // return status after each device operation (0 = succes
 uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;     // count of all bytes currently in FIFO
 uint8_t fifoBuffer[64]; // FIFO storage buffer
+float final_euler[3];
+float final_ypr[3];
 volatile bool mpuInterrupt = false;
 
 // game global vars
 boolean endgame = false;
 boolean faceChange = false;
-int8_t activeF = 1;
+uint8_t activeF = 0;
 face F[12] = {0};
 
 void maingame() {
   while(1){
-  // Game code
   /* Game start */
   boolean start;
   do{
-    Serial.print("Waiting for start... ");
+    //Serial.print("Waiting for start... ");
     Serial.println(start);
     start = shake(50, 150, 1);
   }while(!start);
@@ -137,9 +138,6 @@ void maingame() {
     //playSdWav1.play("win.wav");
     //delay(50); // wait for library to parse WAV info
   }*/
-  #ifdef ACCEL
-  activeF = getFace();
-  #endif
   Serial.print("Face: ");
   Serial.print(activeF + 1);
   Serial.print("    ");
@@ -297,7 +295,7 @@ void setup() {
   arrayInit();
   /* Register and start threads */
   //threads.setSliceMillis(200);
-  threads.addThread(maingame);
+  //threads.addThread(maingame);
 }
 void loop() {
   // The main loop is dedicated to the accelerometer
@@ -305,9 +303,7 @@ void loop() {
   VectorFloat gravity;    //gravity vector
   Quaternion q;
   float euler[3];
-  float final_euler[3];
   float ypr[3];
-  float final_ypr[3];
   if (!dmpReady) return;
     while (!mpuInterrupt && fifoCount < packetSize) {
         // other program behavior stuff here
@@ -335,26 +331,31 @@ void loop() {
           final_euler[i] = euler[i] * 180/M_PI;
           final_ypr[i] = ypr[i] * 180/M_PI;
         }
+        Serial.print("euler\t");
+        Serial.print(euler[0] * 180/M_PI);
+        Serial.print("\t");
+        Serial.print(euler[1] * 180/M_PI);
+        Serial.print("\t");
+        Serial.println(euler[2] * 180/M_PI);
+        //int newF = getFace();
+        //if(newF != activeF) {
+          //activeF = newF;
+          //Serial.print("Active face: ");
+          //Serial.println(activeF);
+        //}
     }
 }
 
-uint32_t getFace() {
-  int32_t  dX, dY, dZ, d, dMin = 999999;
-  int16_t  fX, fY, fZ;
-  uint8_t  i, iMin = 0;
-  sensors_event_t event;
-  #ifdef ACCEL
-  accel.getEvent(&event);
-  #endif
-
-  for ( i = 0; i < 12; i++) { // For each face...
-    fX = pgm_read_word(&gtable[i][0]); // Read face X/Y/Z
-    fY = pgm_read_word(&gtable[i][1]); // from PROGMEM
-    fZ = pgm_read_word(&gtable[i][2]);
-    dX = event.acceleration.x - fX; // Delta between accelerometer & face
-    dY = event.acceleration.y - fY;
-    dZ = event.acceleration.z - fZ;
-    d  = dX * dX + dY * dY + dZ * dZ; // Distance^2
+int getFace() {
+  int d, iMin, dMin = 999999;
+  float fY, fZ, dY, dZ;
+  
+  for (int i=0; i < 12; i++) { // For each face...
+    fY = pgm_read_word(&gtable[i][1]); // Read y and z coordinates
+    fZ = pgm_read_word(&gtable[i][2]); // from PROGMEM
+    dY = final_euler[1] - fY; // Delta between accelerometer & face
+    dZ = final_euler[2] - fZ; // Delta between accelerometer & face
+    d  = dY * dY + dZ * dZ; // Distance^2
     // Check if this face is the closest match so far.  Because
     // we're comparing RELATIVE distances, sqrt() can be avoided.
     if (d < dMin) { // New closest match?
@@ -362,7 +363,11 @@ uint32_t getFace() {
       iMin = i;    // Save index of closest match
     }
   }
-  return iMin; // Index of closest matching face
+  if((iMin == 0) || (iMin == 11)) { //Top and bottom face disambiguation
+    iMin = (final_ypr[2] > 160) ? 11 : 0;
+  }
+  Serial.println(iMin);
+  return iMin; // Index of closest matching face*/
 }
 
 //shake detection
@@ -426,7 +431,8 @@ void game(){
   int x = 0;
   while (facesLeft) {
     //get the upward face
-    activeF = getFace();
+    Serial.print("Face active: ");
+    Serial.println(activeF);
     //check if there are not active faces left
     for (int i = 0; i < 12; i++) {
       x = x + F[i].resPresent;
