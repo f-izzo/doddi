@@ -250,54 +250,6 @@ void dmpDataReady() {
     mpuInterrupt = true;
 }
 
-void accel() {
-  VectorInt16 aa;         //accel sensor measurements
-  VectorFloat gravity;    //gravity vector
-  Quaternion q;
-  float euler[3];
-  float ypr[3];
-  while(1){
-    if (!dmpReady) return;
-    while (!mpuInterrupt && fifoCount < packetSize) {
-        // other program behavior stuff here
-    }
-    //if (!mpuInterrupt && fifoCount < packetSize) continue;
-    mpuInterrupt = false;
-    mpuIntStatus = mpu.getIntStatus();
-    Serial.print("MPU status: ");
-    Serial.println(mpuIntStatus);
-    fifoCount = mpu.getFIFOCount();
-    // check for overflow (this should never happen unless our code is too inefficient)
-    if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
-        // reset so we can continue cleanly
-        mpu.resetFIFO();
-        Serial.println(F("FIFO overflow!"));
-    // otherwise, check for DMP data ready interrupt
-    } else if (mpuIntStatus & 0x02) {
-        while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
-        mpu.getFIFOBytes(fifoBuffer, packetSize);
-        fifoCount -= packetSize;
-        mpu.dmpGetQuaternion(&q, fifoBuffer);
-        mpu.dmpGetEuler(euler, &q);
-        mpu.dmpGetGravity(&gravity, &q);
-        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-              Serial.print("euler\t");
-              Serial.print(euler[0] * 180/M_PI);
-              Serial.print("\t");
-              Serial.print(euler[1] * 180/M_PI);
-              Serial.print("\t");
-              Serial.println(euler[2] * 180/M_PI);
-
-              Serial.print("ypr\t");
-              Serial.print(ypr[0] * 180/M_PI);
-              Serial.print("\t");
-              Serial.print(ypr[1] * 180/M_PI);
-              Serial.print("\t");
-              Serial.println(ypr[2] * 180/M_PI);
-    }
-  }
-}
-
 void accelinit() {
   mpu.initialize();
   Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
@@ -344,11 +296,46 @@ void setup() {
   /* Data structure initialization */
   arrayInit();
   /* Register and start threads */
-  threads.setSliceMillis(200);
-  //threads.addThread(maingame);
-  threads.addThread(accel);
+  //threads.setSliceMillis(200);
+  threads.addThread(maingame);
 }
 void loop() {
+  // The main loop is dedicated to the accelerometer
+  VectorInt16 aa;         //accel sensor measurements
+  VectorFloat gravity;    //gravity vector
+  Quaternion q;
+  float euler[3];
+  float final_euler[3];
+  float ypr[3];
+  float final_ypr[3];
+  if (!dmpReady) return;
+    while (!mpuInterrupt && fifoCount < packetSize) {
+        // other program behavior stuff here
+    }
+    //if (!mpuInterrupt && fifoCount < packetSize) continue;
+    mpuInterrupt = false;
+    mpuIntStatus = mpu.getIntStatus();
+    fifoCount = mpu.getFIFOCount();
+    // check for overflow (this should never happen unless our code is too inefficient)
+    if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
+        // reset so we can continue cleanly
+        mpu.resetFIFO();
+        Serial.println(F("FIFO overflow!"));
+    // otherwise, check for DMP data ready interrupt
+    } else if (mpuIntStatus & 0x02) {
+        while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+        mpu.getFIFOBytes(fifoBuffer, packetSize);
+        fifoCount -= packetSize;
+        mpu.dmpGetQuaternion(&q, fifoBuffer);
+        mpu.dmpGetEuler(euler, &q);
+        mpu.dmpGetGravity(&gravity, &q);
+        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+        for(int i=0; i<3; i++)
+        {
+          final_euler[i] = euler[i] * 180/M_PI;
+          final_ypr[i] = ypr[i] * 180/M_PI;
+        }
+    }
 }
 
 uint32_t getFace() {
