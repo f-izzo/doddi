@@ -72,14 +72,18 @@ uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
 uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;     // count of all bytes currently in FIFO
-uint8_t fifoBuffer[64]; // FIFO storage buffer
+uint8_t fifoBuffer[128]; // FIFO storage buffer
 float final_euler[3];
 float final_ypr[3];
 VectorInt16 aaWorld;
 volatile bool mpuInterrupt = false;
 
+enum states {OFF=0, START=1, GAME=2, STOP=3};  //States of the FSM
+int state = OFF;
+
 // game global vars
 boolean start = false;
+boolean gamerunning = false;
 boolean endgame = false;
 boolean faceChange = false;
 uint8_t activeF = 0;
@@ -115,30 +119,41 @@ void arrayInit() {
 }
 
 void maingame() {
-  /* Game start */
-  Serial.print("Waiting for start... ");
-  Serial.println(start);
-  start = shake(50, 150, 1);
-  if(!start) return;
-
-  Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
-  Serial.println("Start playing");
-  playSdWav1.play("start1.wav");
-  delay(50); // wait for library to parse WAV info
-  setAllPixels(purple);
-  delay(500); //Delay to make game slower
-
-  // Turn on all faces with colors
-  // Set faces color to corresponding resources
-  for (int i = 0; i < NUMPIXELS; i++) {
-    if (F[i].isActive == 0) {
-      pixels.setPixelColor(i, F[i].color);
-      pixels.show();
-      delay(50);
+  Serial.print("state: ");
+  Serial.println(state);
+  switch(state)
+  {
+    case OFF:
+      if(shaken) state = START; //State change condition
+      shaken = false; //Reset shaken to avoid skipping through states
+      setAllPixels(off);
+      Serial.print("Waiting for start... ");
+      break;
+      
+    case START:
+      if(shaken) state = GAME; //State change condition
+      shaken = false; //Reset shaken to avoid skipping through states
+      Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
+      Serial.println("Start playing");
+      playSdWav1.play("start1.wav");
+      delay(50); // wait for library to parse WAV info
+      setAllPixels(purple);
+      delay(500); //Delay to make game slower
+      // Turn on all faces with colors
+      // Set faces color to corresponding resources
+      for (int i = 0; i < NUMPIXELS; i++) {
+        if (F[i].isActive == 0) {
+          pixels.setPixelColor(i, F[i].color);
+          pixels.show();
+          delay(50);
+        }
+      }
+      break;
+      
+    case GAME:
+      //game();
+      break;
     }
-  }
-  shaken = shake(50, 150, 1);
-  if(shaken) game();
   //NOTE nonsense
   // Game ending condition?
   /*
@@ -213,7 +228,7 @@ void maingame() {
         break;
     }
     delay(50); // wait for library to parse WAV info
-    shaken = shake(50, 100, 0);
+    //shaken = shake(50, 100, 0);
     //delay(1000);
   }
 }
@@ -308,12 +323,14 @@ void loop() {
   float euler[3];
   float ypr[3];
   if (!dmpReady) return;
-    while (!mpuInterrupt && fifoCount < packetSize) {
+    while (!mpuInterrupt){ //&& fifoCount < packetSize) { // This condition is causing hang
         // The game code is executed while the accelerometer is not working
         maingame();
     }
     mpuInterrupt = false;
     mpuIntStatus = mpu.getIntStatus();
+    Serial.print("MPU status: ");
+    Serial.println(mpuIntStatus);
     fifoCount = mpu.getFIFOCount();
     // check for overflow (this should never happen unless our code is too inefficient)
     if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
@@ -426,57 +443,3 @@ boolean getShake() {
     return true;
   else return false;
 }
-//shake detection
-#ifdef ACCEL
-boolean shake(uint32_t ms, uint32_t timeout, int small) {
-  int d = (small)? 80 : 210; //small or big shake
-  uint32_t startTime, prevTime, currentTime;
-  int32_t  prevX, prevY, prevZ;
-  int32_t  dX, dY, dZ;
-
-  // Get initial orientation and time
-  sensors_event_t event;
-  #ifdef ACCEL
-  accel.getEvent(&event);
-  #endif
-  prevX    = event.acceleration.x;
-  prevY    = event.acceleration.y;
-  prevZ    = event.acceleration.z;
-  prevTime = startTime = millis();
-
-  // Then make repeated readings until orientation settles down.
-  // A normal roll should only take a second or two...if things do not
-  // stabilize before timeout, probably being moved or carried.
-  while (((currentTime = millis()) - startTime) < timeout) {
-    if ((currentTime - prevTime) >= ms) return false; // Stable!
-    sensors_event_t event;
-    #ifdef ACCEL
-    accel.getEvent(&event);
-    #endif
-    dX = event.acceleration.x - prevX; // X/Y/Z delta from last stable position
-    dY = event.acceleration.y - prevY;
-    dZ = event.acceleration.z - prevZ;
-    // Compare distance.  sqrt() can be avoided by squaring distance
-    // to be compared; about 100 units on X+Y+Z axes ((100^2)*3 = 30K)
-    if ((dX * dX + dY * dY + dZ * dZ) >= d) { // Big change?
-      prevX    = event.acceleration.x;    // Save new position
-      prevY    = event.acceleration.y;
-      prevZ    = event.acceleration.z;
-      prevTime = millis(); // Reset timer
-    }
-  }
-  return true;
-}
-#endif
-#ifndef ACCEL
-// Fake shake detection
-boolean shake(uint32_t ms, uint32_t timeout, int small) {
-  int time = millis();
-  while(Serial.read()== -1 && (millis() - time < timeout))
-  {
-    delay(10);
-  }
-  if(millis() - time < timeout) return true;
-  else return false;
-}
-#endif
