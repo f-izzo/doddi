@@ -11,17 +11,19 @@
 #include <Audio.h>
 #include <SPI.h>
 #include <SD.h>
-//#include <SerialFlash.h>
 
 /* TODO
 - Evitare la riattivazione immediata di shaken
 - Controllare che le facce corrispondano ai LED
-FSM structure
+- Implementare face selection
+- Implementare standby
+
+NOTE FSM structure
 off-selection-minigame-off
 */
 
 //#define ACCEL
-#define ACCEL_DEBUG
+//#define ACCEL_DEBUG
 #define vib 16
 #define INTERRUPT_PIN  5
 #define PIN            23   // Pin on the Arduino connected to the NeoPixels
@@ -89,11 +91,11 @@ int state = OFF;
 // game global vars
 boolean start = false;
 boolean gamerunning = false;
-boolean facesLeft = true;
 boolean endgame = false;
 boolean faceChange = false;
 uint8_t activeF = 0;
 boolean shaken = false;
+long lastshake = 0;
 face F[12] = {0};
 
 void arrayInit() {
@@ -125,13 +127,16 @@ void arrayInit() {
 }
 
 void maingame() {
+  boolean facesLeft = true;
   Serial.print("state: ");
   Serial.println(state);
   switch(state)
   {
     case OFF:
-      if(shaken) state = SELECTION; //State change condition
-      shaken = false; //Reset shaken to avoid skipping through states
+      if(shaken) {
+        state = SELECTION; //State change condition
+        shaken = false; //Reset shaken to avoid skipping through states
+      }
       setAllPixels(off);
       Serial.print("Waiting for start... ");
       break;
@@ -139,9 +144,9 @@ void maingame() {
     case SELECTION:
       if(shaken) {
         state = MINIGAME; //State change condition
+        shaken = false; //Reset shaken to avoid skipping through states
         setAllPixels(off);
       }
-      shaken = false; //Reset shaken to avoid skipping through states
       Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
       Serial.println("Start playing");
       playSdWav1.play("start1.wav");
@@ -171,7 +176,7 @@ void maingame() {
         pixels.show();
         F[activeF].resPresent = 1;
       }
-      boolean facesLeft = false;
+      facesLeft = false;
       //facesLeft: there are faces still not active
       for (int i = 0; i < 12; i++) {
         if(!F[i].resPresent) facesLeft = true;
@@ -249,8 +254,8 @@ void loop() {
     }
     mpuInterrupt = false;
     mpuIntStatus = mpu.getIntStatus();
-    Serial.print("MPU status: ");
-    Serial.println(mpuIntStatus);
+    //Serial.print("MPU status: ");
+    //Serial.println(mpuIntStatus);
     fifoCount = mpu.getFIFOCount();
     // check for overflow (this should never happen unless our code is too inefficient)
     if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
@@ -299,8 +304,11 @@ void loop() {
           Serial.print("Active face: ");
           Serial.println(activeF);
         }
-        shaken = getShake();
-        if(shaken) printf("Shake: true");
+        if(millis() - lastshake > 1000) {
+          shaken = getShake();
+          lastshake = millis();
+          if(shaken) printf("Shake: true");
+        }
     }
 }
 
