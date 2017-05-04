@@ -16,6 +16,8 @@
 /* TODO
 - Evitare la riattivazione immediata di shaken
 - Controllare che le facce corrispondano ai LED
+FSM structure
+off-selection-minigame-off
 */
 
 //#define ACCEL
@@ -81,7 +83,7 @@ float final_ypr[3];
 VectorInt16 aaWorld;
 volatile bool mpuInterrupt = false;
 
-enum states {OFF=0, START=1, GAME=2, STOP=3};  //States of the FSM
+enum states {OFF=0, SELECTION=1, MINIGAME=2, STOP=3};  //States of the FSM
 int state = OFF;
 
 // game global vars
@@ -128,15 +130,15 @@ void maingame() {
   switch(state)
   {
     case OFF:
-      if(shaken) state = START; //State change condition
+      if(shaken) state = SELECTION; //State change condition
       shaken = false; //Reset shaken to avoid skipping through states
       setAllPixels(off);
       Serial.print("Waiting for start... ");
       break;
 
-    case START:
+    case SELECTION:
       if(shaken) {
-        state = GAME; //State change condition
+        state = MINIGAME; //State change condition
         setAllPixels(off);
       }
       shaken = false; //Reset shaken to avoid skipping through states
@@ -157,10 +159,10 @@ void maingame() {
       }
       break;
 
-    case GAME:
+    case MINIGAME:
       /* Highlight all the faces by placing them up*/
       //Highlight the upward face
-      if (F[activeF].resPresent == 0) {
+      if (F[activeF].resPresent == false) {
         uint32_t oldcolor = pixels.getPixelColor(activeF);
         int oldr = splitColor(oldcolor, 'r');
         int oldg = splitColor(oldcolor, 'g');
@@ -186,60 +188,9 @@ void maingame() {
       Serial.println("End playing");
       playSdWav1.play("win.wav");
       delay(50); // wait for library to parse WAV info
+      state = OFF;
       break;
   }
-  /*//NOTE nonsense
-  // Face highlighting
-  if (F[activeF].isActive == 0) {
-    // simple blink
-    pixels.setPixelColor(activeF, F[activeF].color);
-    pixels.show();
-    delay(100);
-    pixels.setPixelColor(activeF, off);
-    pixels.show();
-    Serial.print("resource = ");
-    Serial.print(F[activeF].resID);
-    //TODO: print resource status from color intensity
-  }
-  //vibration for choosing
-  if (faceChange != activeF)
-  {
-    Serial.println("the face has changed");
-    faceChange = activeF;
-    digitalWrite(vib, HIGH);
-    delay(150);
-    digitalWrite(vib, LOW);
-  }
-  //Face activation sequence
-  while (shaken) {
-    //tell me what face was activated
-    Serial.print("Face nr ");
-    Serial.print(activeF + 1);
-    Serial.println(" has been activated");
-    //change color of the activated face to purple
-    pixels.setPixelColor(activeF, purple);
-    pixels.show();
-    F[activeF].isActive = 1;
-    //face activation sound
-    switch(F[activeF].resID)
-    {
-      case 0:
-        playSdWav1.play("s1.wav");
-        break;
-      case 1:
-        playSdWav1.play("s2.wav");
-        break;
-      case 2:
-        playSdWav1.play("s3.wav");
-        break;
-      case 3:
-        playSdWav1.play("s4.wav");
-        break;
-    }
-    delay(50); // wait for library to parse WAV info
-    //shaken = shake(50, 100, 0);
-    //delay(1000);
-  }*/
 }
 
 void setAllPixels(uint32_t color) {
