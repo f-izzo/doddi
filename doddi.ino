@@ -13,6 +13,11 @@
 #include <SD.h>
 //#include <SerialFlash.h>
 
+/* TODO
+- Evitare la riattivazione immediata di shaken
+- Controllare che le facce corrispondano ai LED
+*/
+
 //#define ACCEL
 #define ACCEL_DEBUG
 #define vib 16
@@ -20,8 +25,6 @@
 #define PIN            23   // Pin on the Arduino connected to the NeoPixels
 #define NUMPIXELS      8   //Number of NeoPixels attached to the Arduino
 #define SHAKE_THRESH   1500
-
-boolean shake(uint32_t ms, uint32_t timeout, int small);
 
 MPU6050 mpu;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_RGB + NEO_KHZ800);
@@ -84,6 +87,7 @@ int state = OFF;
 // game global vars
 boolean start = false;
 boolean gamerunning = false;
+boolean facesLeft = true;
 boolean endgame = false;
 boolean faceChange = false;
 uint8_t activeF = 0;
@@ -129,9 +133,12 @@ void maingame() {
       setAllPixels(off);
       Serial.print("Waiting for start... ");
       break;
-      
+
     case START:
-      if(shaken) state = GAME; //State change condition
+      if(shaken) {
+        state = GAME; //State change condition
+        setAllPixels(off);
+      }
       shaken = false; //Reset shaken to avoid skipping through states
       Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
       Serial.println("Start playing");
@@ -149,37 +156,39 @@ void maingame() {
         }
       }
       break;
-      
+
     case GAME:
-      //game();
+      /* Highlight all the faces by placing them up*/
+      //Highlight the upward face
+      if (F[activeF].resPresent == 0) {
+        uint32_t oldcolor = pixels.getPixelColor(activeF);
+        int oldr = splitColor(oldcolor, 'r');
+        int oldg = splitColor(oldcolor, 'g');
+        int oldb = splitColor(oldcolor, 'b');
+        pixels.setPixelColor(activeF, pixels.Color((oldr + 50), (oldg + 50), (oldb + 50)));
+        pixels.show();
+        F[activeF].resPresent = 1;
+      }
+      boolean facesLeft = false;
+      //facesLeft: there are faces still not active
+      for (int i = 0; i < 12; i++) {
+        if(!F[i].resPresent) facesLeft = true;
+      }
+      if (facesLeft == false) state = STOP;
       break;
-    }
-  //NOTE nonsense
-  // Game ending condition?
-  /*
-  boolean endgame = shake(50, 120, 1);
-  while (!endgame) {
-    Serial.println("Starting minigames ");
-    playSdWav1.play("start1.wav");   //starting minigame sound
-    delay(50); // wait for library to parse WAV info
-    // "animation"
-    for (int i = 0; i < 3; i++) {
-      setAllPixels(purple);
-      setAllPixels(off);
-    }    
-    //endgame = shake(50, 170, 1);   //coment this out to stay inside the loop
-    //minigame sound play
-    //Serial.println("End playing");
-    //playSdWav1.play("win.wav");
-    //delay(50); // wait for library to parse WAV info
-  }*/
-  //Serial.print("Face: ");
-  //Serial.print(activeF);
-  //Serial.print("    ");
-  //Serial.print("Shake: ");
-  //shaken = shake(50, 80, 0);
-  //Serial.print(shaken);
-  //Serial.println("    ");
+
+    case STOP:
+      //zeroing faces
+      for (int i = 0; i < 12; i++) {
+        F[i].resPresent = 0;
+      }
+      //minigame sound play
+      Serial.println("End playing");
+      playSdWav1.play("win.wav");
+      delay(50); // wait for library to parse WAV info
+      break;
+  }
+  /*//NOTE nonsense
   // Face highlighting
   if (F[activeF].isActive == 0) {
     // simple blink
@@ -230,47 +239,7 @@ void maingame() {
     delay(50); // wait for library to parse WAV info
     //shaken = shake(50, 100, 0);
     //delay(1000);
-  }
-}
-void game(){
-  setAllPixels(off);
-  boolean facesLeft = true;
-  int x = 0;
-  while (facesLeft) {
-    //get the upward face
-    Serial.print("Face active: ");
-    Serial.println(activeF);
-    //check if there are not active faces left
-    for (int i = 0; i < 12; i++) {
-      x = x + F[i].resPresent;
-    }
-    if (x == 12) {
-      facesLeft = false;
-    }
-    else {
-      facesLeft = true;
-      x = 0;
-    }
-    //Highlight face
-    if (F[activeF].resPresent == 0) {
-      uint32_t oldcolor = pixels.getPixelColor(activeF);
-      int oldr = splitColor(oldcolor, 'r');
-      int oldg = splitColor(oldcolor, 'g');
-      int oldb = splitColor(oldcolor, 'b');
-      pixels.setPixelColor(activeF, pixels.Color((oldr + 50), (oldg + 50), (oldb + 50)));
-      pixels.show();
-      F[activeF].resPresent = 1;
-    }
-  }
-  //zeroing faces
-  for (int i = 0; i < 12; i++) {
-    F[i].resPresent = 0;
-  }
-  facesLeft = true;
-  //minigame sound play
-  Serial.println("End playing");
-  playSdWav1.play("win.wav");
-  delay(50); // wait for library to parse WAV info
+  }*/
 }
 
 void setAllPixels(uint32_t color) {
@@ -414,7 +383,7 @@ void accelinit() {
 int getFace() {
   int d, iMin = 0, dMin = 999999;
   float fY, fZ, dY, dZ;
-  
+
   for (int i=0; i < 12; i++) { // For each face...
     fY = (float)facesYZ[i][0]; // Read y and z coordinates
     fZ = (float)facesYZ[i][1];
