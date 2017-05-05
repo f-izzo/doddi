@@ -90,6 +90,7 @@ int state = OFF;
 
 // game global vars
 boolean start = false;
+boolean done = false;
 boolean gamerunning = false;
 boolean endgame = false;
 boolean faceChange = false;
@@ -136,6 +137,7 @@ void maingame() {
       if(shaken) {
         state = SELECTION; //State change condition
         shaken = false; //Reset shaken to avoid skipping through states
+        done = false;
       }
       setAllPixels(off);
       Serial.print("Waiting for start... ");
@@ -147,20 +149,23 @@ void maingame() {
         shaken = false; //Reset shaken to avoid skipping through states
         setAllPixels(off);
       }
-      Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
-      Serial.println("Start playing");
-      playSdWav1.play("start1.wav");
-      delay(50); // wait for library to parse WAV info
-      setAllPixels(purple);
-      delay(500); //Delay to make game slower
-      // Turn on all faces with colors
-      // Set faces color to corresponding resources
-      for (int i = 0; i < NUMPIXELS; i++) {
-        if (F[i].isActive == 0) {
-          pixels.setPixelColor(i, F[i].color);
-          pixels.show();
-          delay(50);
+      while(!done) {
+        Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
+        Serial.println("Start playing");
+        playSdWav1.play("start1.wav");
+        delay(50); // wait for library to parse WAV info
+        setAllPixels(purple);
+        delay(500); //Delay to make game slower
+        // Turn on all faces with colors
+        // Set faces color to corresponding resources
+        for (int i = 0; i < NUMPIXELS; i++) {
+          if (F[i].isActive == 0) {
+            pixels.setPixelColor(i, F[i].color);
+            pixels.show();
+            delay(50);
+          }
         }
+      done=true;
       }
       break;
 
