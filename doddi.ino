@@ -27,11 +27,11 @@ off-selection-minigame-off
 #define vib 16
 #define INTERRUPT_PIN  5
 #define PIN            23   // Pin on the Arduino connected to the NeoPixels
-#define NUMPIXELS      8   //Number of NeoPixels attached to the Arduino
+#define NUMPIXELS      12   //Number of NeoPixels attached to the Arduino
 #define SHAKE_THRESH   1500
 
 MPU6050 mpu;
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_RGB + NEO_KHZ800);
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 AudioPlaySdWav           playSdWav1;
 AudioOutputAnalog        dac1;
@@ -229,6 +229,7 @@ void setup() {
   pinMode(vib, OUTPUT);
   pinMode(INTERRUPT_PIN, INPUT);
   pixels.begin();
+  pixels.setBrightness(64);
   pixels.show();  // turn off all the pixels
   Serial.begin(9600);
   SPI.begin();
