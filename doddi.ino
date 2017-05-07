@@ -12,13 +12,8 @@
 #include <SPI.h>
 #include <SD.h>
 
-/* TODO
-- Evitare la riattivazione immediata di shaken
-- Controllare che le facce corrispondano ai LED
-- Implementare face selection
-- Implementare standby
-
-NOTE FSM structure
+/*
+NOTE Finite State Machine structure
 off-selection-minigame-off
 */
 
@@ -30,6 +25,9 @@ off-selection-minigame-off
 #define NUMPIXELS      12   //Number of NeoPixels attached to the Arduino
 #define SHAKE_THRESH   1500
 
+void setAllPixels(uint32_t color);
+uint8_t splitColor ( uint32_t c, char value );
+
 MPU6050 mpu;
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -40,16 +38,16 @@ AudioConnection          patchCord1(playSdWav1, 0, dac1, 0);
 //faces coordinates
 const int facesYZ[12][2] = {
   { 0,   0}, //  0
-  { 20, 50}, //  1
-  { 60, -3},//  2
-  { 15, -50},//  3
-  {-40, -30}, //  4
-  {-38,  30}, //  5
-  { 50,  30}, //  6
-  { 40, -30}, //  7
-  {-15, -60}, //  8
-  {-69,  -5}, //  9
-  {-15,  60}, // 10
+  { 50,  30}, //  1
+  { 40, -30}, //  2
+  {-15, -60}, //  3
+  {-69,  -5}, //  4
+  {-15,  60}, // 5
+  { 60, -3},//  6
+  { 15, -50},//  7
+  {-40, -30}, //  8 
+  {-38,  30}, //  9
+  { 20, 50}, //  10
   { 0 ,  0},  // 11
 };
 
@@ -66,7 +64,7 @@ typedef struct face{
   boolean isActive;
 } face;
 
-const uint32_t yellow = pixels.Color(255, 255, 0);
+const uint32_t yellow = pixels.Color(150, 150, 0);
 const uint32_t red = pixels.Color(200, 0, 0);
 const uint32_t green = pixels.Color(0, 200, 0);
 const uint32_t blue = pixels.Color(0, 0, 200);
@@ -86,7 +84,7 @@ VectorInt16 aaWorld;
 volatile bool mpuInterrupt = false;
 
 enum states {OFF=0, SELECTION=1, MINIGAME=2, STOP=3};  //States of the FSM
-int state = OFF;
+int state = SELECTION;
 
 // game global vars
 boolean start = false;
@@ -128,9 +126,9 @@ void arrayInit() {
 }
 
 void maingame() {
+  int oldr, oldg, oldb;
+  uint32_t oldcolor;
   boolean facesLeft = true;
-  Serial.print("state: ");
-  Serial.println(state);
   switch(state)
   {
     case OFF:
@@ -148,24 +146,32 @@ void maingame() {
         state = MINIGAME; //State change condition
         shaken = false; //Reset shaken to avoid skipping through states
         setAllPixels(off);
-      }
-      while(!done) {
         Serial.println("START TO PLAY!!                SOUND FEEDBACK-->intro story");
         Serial.println("Start playing");
         playSdWav1.play("start1.wav");
         delay(50); // wait for library to parse WAV info
+      }
+      else{
+      while(!done) {
         setAllPixels(purple);
         delay(500); //Delay to make game slower
-        // Turn on all faces with colors
-        // Set faces color to corresponding resources
-        for (int i = 0; i < NUMPIXELS; i++) {
-          if (F[i].isActive == 0) {
-            pixels.setPixelColor(i, F[i].color);
-            pixels.show();
-            delay(50);
-          }
-        }
       done=true;
+      }
+      // Turn on all faces with colors
+      // Set faces color to corresponding resources
+      for (int i = 0; i < NUMPIXELS; i++) {
+        if (F[i].isActive == 0) {
+          pixels.setPixelColor(i, F[i].color);
+          pixels.show();
+          delay(50);
+        }
+      }
+      oldcolor = pixels.getPixelColor(activeF);
+      oldr = splitColor(oldcolor, 'r');
+      oldg = splitColor(oldcolor, 'g');
+      oldb = splitColor(oldcolor, 'b');
+      pixels.setPixelColor(activeF, pixels.Color((oldr + 55), (oldg + 55), (oldb + 55)));
+      pixels.show();
       }
       break;
 
@@ -173,11 +179,7 @@ void maingame() {
       /* Highlight all the faces by placing them up*/
       //Highlight the upward face
       if (F[activeF].resPresent == false) {
-        uint32_t oldcolor = pixels.getPixelColor(activeF);
-        int oldr = splitColor(oldcolor, 'r');
-        int oldg = splitColor(oldcolor, 'g');
-        int oldb = splitColor(oldcolor, 'b');
-        pixels.setPixelColor(activeF, pixels.Color((oldr + 50), (oldg + 50), (oldb + 50)));
+        pixels.setPixelColor(activeF, purple);
         pixels.show();
         F[activeF].resPresent = 1;
       }
@@ -198,7 +200,7 @@ void maingame() {
       Serial.println("End playing");
       playSdWav1.play("win.wav");
       delay(50); // wait for library to parse WAV info
-      state = OFF;
+      state = SELECTION;
       break;
   }
 }
@@ -309,6 +311,9 @@ void loop() {
           activeF = newF;
           Serial.print("Active face: ");
           Serial.println(activeF);
+          digitalWrite(vib, HIGH);
+          delay(30);
+          digitalWrite(vib, LOW);
         }
         if(millis() - lastshake > 1000) {
           shaken = getShake();
@@ -364,7 +369,7 @@ int getFace() {
   }
   if((iMin == 0) || (iMin == 11)) { //Top and bottom face disambiguation
     int eulerZ = (final_euler[2] > 0) ? final_euler[2] : -final_euler[2];
-    iMin = (eulerZ > 160) ? 11 : 0;
+    iMin = (eulerZ > 160) ? 0 : 11;
   }
   return iMin; // Index of closest matching face*/
 }
