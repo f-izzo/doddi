@@ -23,3 +23,7 @@ La presa USB é visibile nella foto:
 ![usb](https://github.com/Nimayer/doddi/blob/master/img/usb.jpg?raw=true)
 
 Mentre la batteria si carica, si accenderá un LED arancione, che diventerá verde quando la batteria sará carica.
+
+## Codice
+
+Tutto il software e i progetti hardware sono disponibili sul repository github https://github.com/Nimayer/doddi
